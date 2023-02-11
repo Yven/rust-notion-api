@@ -16,8 +16,15 @@
 
 ## 使用
 ### 1.复制并修改配置文件
-```cp secret.json.example secret.json```
+```shell
+cp secret.json.example secret.json
+```
 将你申请的Notion API密钥和要查询的databases id写入
+
+### 2.运行
+```shell
+cargo run
+```
 
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
