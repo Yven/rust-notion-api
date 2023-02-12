@@ -26,5 +26,11 @@ cp secret.json.example secret.json
 cargo run
 ```
 
+## TODO LIST
+- [ ] 构造请求筛选器
+- [ ] Page/Database结构和方法
+- [ ] 统一错误结构
+- [ ] markdown格式映射
+
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
