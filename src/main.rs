@@ -8,9 +8,18 @@ fn main() {
     let key = config["key"].as_str().unwrap().to_string();
     let db_id = config["db_id"].as_str().unwrap().to_string();
 
-    let request = notion::Request::new(&key);
-    let body = ReqBody::new(FilterMap::new(), SortMap::new());
-    let response = request.query(notion::NotionModule::Databases, &db_id, body).unwrap();
+    let s1 = PropertyType::Select("Status".to_string()).does_not_equal("conception");
+    let s2 = PropertyType::Select("Status".to_string()).does_not_equal("edit");
+    let s3 = PropertyType::People("Author".to_string()).equals("06a0361f-02e7-4293-8263-2ebdd8569629");
+    // s3 || (s1 && s2)
+    // ||: s3, (&&: s1, s2)
+    let filter = s3.or(s1.and(s2));
 
-    println!("{:#?}", response);
+    println!("{}", filter.build_str());
+    println!("{:#?}", filter);
+
+    let request = notion::Request::new(&key);
+    let body = ReqBody::new(filter, SortMap::new());
+    let _response = request.query(notion::NotionModule::Databases, &db_id, body).unwrap();
+    // println!("{:#?}", response);
 }
