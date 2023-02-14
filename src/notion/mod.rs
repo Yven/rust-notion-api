@@ -75,7 +75,7 @@ impl Request {
             return Err(CommErr::CErr("unsupport module for this method".to_string()));
         }
 
-        let body = serde_json::from_str::<serde_json::Value>(&body.as_str()).unwrap();
+        let body = serde_json::from_str::<serde_json::Value>(&body.to_string()).unwrap();
 
         let client = reqwest::blocking::Client::new();
         let res = client.post(NOTION_URL.to_string() + &module.path(id))

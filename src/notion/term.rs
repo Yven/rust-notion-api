@@ -91,45 +91,52 @@ impl Filter {
         self
     }
 
-    // TODO
-    pub fn build_str(&self) -> String {
-        let mut str = String::from("");
+    pub fn to_string(&self) -> String {
+        let mut str = format!(r#"{{"property":"{}","{}":{{"{}":"{}"}}}}"#, self.property.get_name(), self.property.to_string().to_lowercase(), self.condition.0, self.condition.1);
 
-        if self.has_child() {
+        if self.logic_map.capacity() != 0 {
             for child in self.logic_map.iter() {
-                str += child.build_str().as_str();
+                str = str + "," + child.to_string().as_str();
             }
             return format!(r#"{{"{}":[{}]}}"#, self.logic_operate, str);
         }
 
-        format!(r#"{{"property":"{}","{}":{{"{}":"{}"}}}},"#, self.property.get_name(), self.property.to_string(), self.condition.0, self.condition.1)
+        str
     }
 }
 
 impl FmtDisplay for Filter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let output = if self.logic_map.capacity() != 0 {
-            format!(r#"{{"and": [{}]}}"#, self.build_str())
-        } else {
-            format!(r#"{}"#, self.build_str())
-        };
-        write!(f, "{}", output)
+        write!(f, "{}", self.to_string())
     }
 }
 
 
+#[derive(Display, Debug)]
+pub enum Direction {
+    Descending,
+    Ascending,
+}
+
 #[allow(dead_code)]
-#[derive(Default)]
 pub struct SortMap {
+    property: String,
+    direction: Direction,
 }
 
 impl SortMap {
-    pub fn new() -> Self {
-        SortMap {  }
+    pub fn new(property: String, direction: Direction) -> Self {
+        SortMap { property, direction }
     }
 
-    pub fn as_str(&self) -> &str {
-        "{}"
+    pub fn to_string(&self) -> String {
+        format!(r#"{{"property":"{}","direction":"{}"}}"#, self.property, self.direction.to_string().to_lowercase())
+    }
+}
+
+impl FmtDisplay for SortMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
     }
 }
 
@@ -137,36 +144,27 @@ impl SortMap {
 #[allow(dead_code)]
 pub struct ReqBody {
     filter: Filter,
-    sorts: SortMap,
+    sorts: Vec<SortMap>,
 }
 
 impl ReqBody {
-    pub fn new(filter: Filter, sorts: SortMap) -> Self{
-        ReqBody {filter, sorts}
+    pub fn new(filter: Filter, sorts: Vec<SortMap>) -> Self{
+        ReqBody { filter, sorts }
     }
 
-    pub fn as_str(&self) -> String {
-        // format!( r#"{{"filter": {},"sorts": {}}}"#, self.filter.as_str(), self.sorts.as_str())
+    pub fn to_string(&self) -> String {
+        let mut sorts = String::from("");
+        for s in self.sorts.iter() {
+            sorts = sorts + &s.to_string() + ",";
+        }
+        sorts.pop();
 
-        r#"{
-            "filter": {
-                "and": [{
-                    "property": "Status",
-                    "status": {
-                        "does_not_equal": "conception"
-                    }
-                },{
-                    "property": "Status",
-                    "status": {
-                        "does_not_equal": "edit"
-                    }
-                }
-                ]
-            },
-            "sorts": [{
-                "property": "Edited time",
-                "direction": "descending"
-            }]
-        }"#.to_string()
+        format!( r#"{{"filter": {},"sorts": [{}]}}"#, self.filter.to_string(), sorts)
+    }
+}
+
+impl FmtDisplay for ReqBody {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
     }
 }
