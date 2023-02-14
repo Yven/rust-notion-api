@@ -27,7 +27,8 @@ cargo run
 ```
 
 ## TODO LIST
-- [ ] 构造请求筛选器
+- [x] 构造请求筛选器
+- [ ] 分隔筛选和排序
 - [ ] Page/Database结构和方法
 - [ ] 统一错误结构
 - [ ] markdown格式映射
