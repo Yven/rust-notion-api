@@ -1,7 +1,5 @@
-use super::{get_property_value, get_value_str, filter::PropertyType};
-use std::collections::HashMap;
+use super::{get_property_value, get_value_str, property::Property};
 use serde_json::Value;
-use std::str::FromStr;
 
 
 // 作者信息
@@ -24,52 +22,6 @@ impl Author {
             avatar_url: get_value_str(author, "avatar_url"),
             email: get_value_str(&author["person"], "email"),
             user_type: get_value_str(author, "type"),
-        }
-    }
-}
-
-
-// 页属性结构
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct Property {
-    property: PropertyType,
-    data: Vec<HashMap<String, String>>,
-}
-
-impl Property {
-    pub fn new(key: &String, value: &Value) -> Self {
-        let mut property_data_opt: Vec<HashMap<String, String>> = Vec::new();
-
-        let data = &value[value["type"].as_str().unwrap().to_string()];
-        let data = if !data.is_array() {
-            vec![data]
-        } else {
-            let mut arr_v = Vec::new();
-            for v in data.as_array().unwrap().iter() {
-                arr_v.push(v);
-            }
-
-            arr_v
-        };
-
-        for arr_val in (&data).iter() {
-            let mut elem: HashMap<String, String> = HashMap::new();
-            for (k, v) in arr_val.as_object().unwrap().iter() {
-                if v.is_null() {
-                    continue;
-                }
-                elem.insert(k.to_string(), get_value_str(&arr_val, k));
-            }
-            property_data_opt.push(elem);
-        }
-
-        let enum_name = get_value_str(value, "type");
-        let property = PropertyType::from_str(&enum_name).unwrap().reset_val(key.to_string());
-
-        Property {
-            property,
-            data: property_data_opt,
         }
     }
 }

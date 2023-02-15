@@ -4,6 +4,8 @@ pub mod term;
 pub mod error;
 pub mod sort;
 pub mod filter;
+pub mod property;
+
 
 use error::CommErr;
 use database::Database;
