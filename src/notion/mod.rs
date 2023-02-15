@@ -2,6 +2,8 @@ pub mod page;
 pub mod database;
 pub mod term;
 pub mod error;
+pub mod sort;
+pub mod filter;
 
 use error::CommErr;
 use database::Database;

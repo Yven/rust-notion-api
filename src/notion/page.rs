@@ -1,6 +1,7 @@
-use super::{get_property_value, get_value_str};
+use super::{get_property_value, get_value_str, filter::PropertyType};
 use std::collections::HashMap;
 use serde_json::Value;
+use std::str::FromStr;
 
 
 // 作者信息
@@ -32,8 +33,7 @@ impl Author {
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct Property {
-    name: String,
-    property_type: String,
+    property: PropertyType,
     data: Vec<HashMap<String, String>>,
 }
 
@@ -64,9 +64,11 @@ impl Property {
             property_data_opt.push(elem);
         }
 
+        let enum_name = get_value_str(value, "type");
+        let property = PropertyType::from_str(&enum_name).unwrap().reset_val(key.to_string());
+
         Property {
-            name: key.to_string(),
-            property_type: get_value_str(value, "type"),
+            property,
             data: property_data_opt,
         }
     }
