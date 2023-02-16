@@ -102,7 +102,7 @@ impl Property {
                 if v.is_null() {
                     continue;
                 }
-                elem.insert(k.to_string(), get_value_str(&arr_val, k));
+                elem.insert(k.to_string(), get_value_str(arr_val, k));
             }
             property_data_opt.push(elem);
         }

@@ -28,7 +28,7 @@ impl Filter {
     }
 
     pub fn and(mut self, val: Filter) -> Self {
-        if val.has_child() || self.logic_operate == "or".to_string() {
+        if val.has_child() || self.logic_operate == *"or" {
             return self
         }
 
@@ -38,7 +38,7 @@ impl Filter {
     }
 
     pub fn or(mut self, val: Filter) -> Self {
-        if val.has_child() || self.logic_operate == "and".to_string() {
+        if val.has_child() || self.logic_operate == *"and" {
             return self
         }
 
@@ -47,12 +47,12 @@ impl Filter {
         self
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn build_str(&self) -> String {
         let mut str = format!(r#"{{"property":"{}","{}":{{"{}":"{}"}}}}"#, self.property.get_name(), self.property.to_string().to_lowercase(), self.condition.0, self.condition.1);
 
         if self.logic_map.capacity() != 0 {
             for child in self.logic_map.iter() {
-                str = str + "," + child.to_string().as_str();
+                str = str + "," + child.build_str().as_str();
             }
             return format!(r#"{{"{}":[{}]}}"#, self.logic_operate, str);
         }
@@ -63,6 +63,6 @@ impl Filter {
 
 impl FmtDisplay for Filter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.build_str())
     }
 }

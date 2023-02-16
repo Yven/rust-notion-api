@@ -13,7 +13,7 @@ lazy_static! {
 
         let mut m = HashMap::new();
         m.insert("key", key);
-        m.insert("db_id", &db_id);
+        m.insert("db_id", db_id);
         m
     };
 }

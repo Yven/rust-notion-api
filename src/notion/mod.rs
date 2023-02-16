@@ -33,7 +33,7 @@ pub enum NotionModule {
 
 impl NotionModule {
     fn path(&self, id: &str) -> String {
-        let path = match self {
+        match self {
             NotionModule::Databases => {
                 "databases/".to_string() + id + "/query"
             },
@@ -46,9 +46,7 @@ impl NotionModule {
             NotionModule::Users => {
                 "users/".to_string() + id
             },
-        };
-
-        path
+        }
     }
 }
 
@@ -75,7 +73,6 @@ impl Request {
 
     pub fn query(&self, module: NotionModule, id: &str, body: ReqBody) -> Result<Value, CommErr> {
         if let NotionModule::Databases = module {
-            ()
         } else {
             return Err(CommErr::CErr("unsupport module for this method".to_string()));
         }
@@ -96,7 +93,7 @@ impl Request {
             // Ok(Database::new(res["results"].as_array().unwrap()))
             Ok(res)
         } else {
-            return Err(CommErr::CErr(get_value_str(&res, "message")));
+            Err(CommErr::CErr(get_value_str(&res, "message")))
         }
     }
 
@@ -113,7 +110,7 @@ impl Request {
         if is_success {
             Ok(res)
         } else {
-            return Err(CommErr::CErr(get_value_str(&res, "message")));
+            Err(CommErr::CErr(get_value_str(&res, "message")))
         }
     }
 
