@@ -1,4 +1,4 @@
-use super::{CONFIG_MAP, Request, NotionModule, get_property_value, get_value_str, property::Property};
+use super::{CONFIG_MAP, Request, NotionModule, get_property_value, get_value_str, property::Property, block::Block};
 use serde_json::Value;
 
 
@@ -41,6 +41,7 @@ pub struct Page {
     pub archived: bool,
     pub url: String,
     pub properties: Vec<Property>,
+    pub content: Vec<Block>
 }
 
 impl Page {
@@ -69,6 +70,7 @@ impl Page {
             archived: page["archived"].as_bool().unwrap(),
             url: get_value_str(page, "url"),
             properties,
+            content: Vec::new(),
         }
     }
 

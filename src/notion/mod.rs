@@ -5,6 +5,7 @@ pub mod error;
 pub mod sort;
 pub mod filter;
 pub mod property;
+pub mod block;
 
 
 use super::CONFIG_MAP;
