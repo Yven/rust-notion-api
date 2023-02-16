@@ -1,4 +1,4 @@
-use super::{get_property_value, get_value_str, property::Property};
+use super::{CONFIG_MAP, Request, NotionModule, get_property_value, get_value_str, property::Property};
 use serde_json::Value;
 
 
@@ -70,5 +70,16 @@ impl Page {
             url: get_value_str(page, "url"),
             properties,
         }
+    }
+
+//     pub fn from_remote(key: String, id: String) -> Self {
+//     }
+
+    pub fn content(&self) {
+        let key = CONFIG_MAP.get("key").unwrap();
+        let request = Request::new(key);
+        let response = request.get(NotionModule::Blocks, &self.id).unwrap();
+        let list = response["results"].as_array().unwrap();
+        println!("{:#?}", list);
     }
 }

@@ -1,17 +1,9 @@
-use notion_api::notion;
+use notion_api::notion::database;
 use notion_api::notion::{term, sort, property};
 
 fn main() {
-    let path = env!("CARGO_MANIFEST_DIR").to_string() + "/secret.json";
-    let config = std::fs::read_to_string(path).unwrap();
-    let config = serde_json::from_str::<serde_json::Value>(&config).unwrap();
-    let key = config["key"].as_str().unwrap().to_string();
-    let db_id = config["db_id"].as_str().unwrap().to_string();
-
     let s1 = property::PropertyType::Status("Status".to_string()).does_not_equal("conception");
     let s2 = property::PropertyType::Status("Status".to_string()).does_not_equal("edit");
-    // s3 || (s1 && s2)
-    // ||: s3, (&&: s1, s2)
     let filter = s1.and(s2);
 
     let sort = sort::Sort::new(vec![
@@ -19,11 +11,8 @@ fn main() {
     ]);
 
     let body = term::ReqBody::new(filter, sort);
-    let request = notion::Request::new(&key);
-    let _response = request.query(notion::NotionModule::Databases, &db_id, body);
-
-    match _response {
-        Ok(r) => println!("{:#?}", r),
-        Err(e) => println!("{:#?}", e)
-    }
+    // let request = notion::Request::new(&key);
+    // let _response = request.query(notion::NotionModule::Databases, &db_id, body);
+    let db = database::Database::from_remote(notion_api::CONFIG_MAP.get("db_id").unwrap(), body);
+    db.page_list[0].content();
 }

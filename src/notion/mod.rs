@@ -7,8 +7,9 @@ pub mod filter;
 pub mod property;
 
 
+use super::CONFIG_MAP;
+
 use error::CommErr;
-use database::Database;
 use term::ReqBody;
 
 use reqwest::{self, header::{HeaderMap, HeaderValue, CONTENT_TYPE}};
@@ -72,7 +73,7 @@ impl Request {
         header
     }
 
-    pub fn query(&self, module: NotionModule, id: &str, body: ReqBody) -> Result<Database, CommErr> {
+    pub fn query(&self, module: NotionModule, id: &str, body: ReqBody) -> Result<Value, CommErr> {
         if let NotionModule::Databases = module {
             ()
         } else {
@@ -92,14 +93,29 @@ impl Request {
         let is_success = res.status().is_success();
         let res: Value = serde_json::from_str(res.text()?.as_str())?;
         if is_success {
-            Ok(Database::new(res["results"].as_array().unwrap()))
+            // Ok(Database::new(res["results"].as_array().unwrap()))
+            Ok(res)
         } else {
             return Err(CommErr::CErr(get_value_str(&res, "message")));
         }
     }
 
-    // fn get(&self, module: NotionModule) {
-    // }
+    fn get(&self, module: NotionModule, id: &str) -> Result<Value, CommErr> {
+        let client = reqwest::blocking::Client::new();
+        let res = client.get(NOTION_URL.to_string() + &module.path(id))
+            .bearer_auth(&self.secret_key)
+            .headers(self.get_header())
+            .timeout(Duration::new(REQ_TIME_S, REQ_TIME_NS))
+            .send()?;
+
+        let is_success = res.status().is_success();
+        let res: Value = serde_json::from_str(res.text()?.as_str())?;
+        if is_success {
+            Ok(res)
+        } else {
+            return Err(CommErr::CErr(get_value_str(&res, "message")));
+        }
+    }
 
     // fn save(&self, module: NotionModule) {
     // }
