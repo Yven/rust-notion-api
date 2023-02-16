@@ -13,6 +13,6 @@ fn main() {
     let body = term::ReqBody::new(filter, sort);
     // let request = notion::Request::new(&key);
     // let _response = request.query(notion::NotionModule::Databases, &db_id, body);
-    let db = database::Database::from_remote(notion_api::CONFIG_MAP.get("db_id").unwrap(), body);
+    let mut db = database::Database::from_remote(notion_api::CONFIG_MAP.get("db_id").unwrap(), body);
     db.page_list[0].content();
 }
