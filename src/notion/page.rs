@@ -1,4 +1,4 @@
-use super::{CONFIG_MAP, Request, NotionModule, get_property_value, get_value_str, property::Property, block::Block};
+use super::{Request, NotionModule, get_property_value, get_value_str, property::Property, block::Block};
 use serde_json::Value;
 
 
@@ -78,12 +78,8 @@ impl Page {
 //     }
 
     pub fn content(&mut self) {
-        let key = CONFIG_MAP.get("key").unwrap();
-        let request = Request::new(key);
-        let response = request.get(NotionModule::Blocks, &self.id).unwrap();
-        let list = response["results"].as_array().unwrap();
-
-        for val in list.iter() {
+        let response = Request::new().get(NotionModule::Blocks, &self.id).unwrap();
+        for val in response["results"].as_array().unwrap().iter() {
             self.content.push(Block::from_value(val).unwrap());
         }
 

@@ -59,9 +59,9 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new(secret_key: &str) -> Self {
+    pub fn new() -> Self {
         Request {
-            secret_key: secret_key.to_string(), 
+            secret_key: CONFIG_MAP.get("key").unwrap().to_string(),
         }
     }
 
@@ -91,7 +91,6 @@ impl Request {
         let is_success = res.status().is_success();
         let res: Value = serde_json::from_str(res.text()?.as_str())?;
         if is_success {
-            // Ok(Database::new(res["results"].as_array().unwrap()))
             Ok(res)
         } else {
             Err(CommErr::CErr(get_value_str(&res, "message")))

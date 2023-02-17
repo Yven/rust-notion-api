@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use strum_macros::{Display as EnumDisplay, EnumString};
 use serde_json::Value;
-use super::{CONFIG_MAP, Request, NotionModule, CommErr, get_value_str, get_property_value};
+use super::{Request, NotionModule, CommErr, get_value_str, get_property_value};
 
 
 #[derive(EnumDisplay, EnumString, Debug)]
@@ -141,11 +141,12 @@ pub struct Block {
     pub line_type: BlockType,
     pub color: AnnoColor,
     pub child: Vec<Block>,
+    pub status: Value,
 }
 
 impl Block {
     pub fn new(line_type: BlockType) -> Self {
-        Block { line: Vec::new(), line_type, color: AnnoColor::Default, child: Vec::new() }
+        Block { line: Vec::new(), line_type, color: AnnoColor::Default, child: Vec::new(), status: Value::default() }
     }
 
     pub fn from_text(line_type: BlockType, text: String) -> Self {
@@ -154,6 +155,7 @@ impl Block {
             line_type,
             color: AnnoColor::default(),
             child: Vec::new(),
+            status: Value::default(),
         }
     }
 
@@ -191,15 +193,23 @@ impl Block {
 
         let mut child = Vec::new();
         if value.get("has_children").unwrap().as_bool().unwrap() {
-            let key = CONFIG_MAP.get("key").unwrap();
-            let request = Request::new(key);
-            let response = request.get(NotionModule::Blocks, &get_value_str(value, "id")).unwrap();
-            let list = response["results"].as_array().unwrap();
-            for v in list.iter() {
+            let response = Request::new().get(NotionModule::Blocks, &get_value_str(value, "id")).unwrap();
+            for v in response["results"].as_array().unwrap().iter() {
                 child.push(Block::from_value(v)?);
             }
         }
 
-        Ok(Block { line, line_type, color, child })
+        let status = {
+            use BlockType::*;
+            match line_type {
+                Heading1|Heading2|Heading3 => block.get("is_toggleable").unwrap().to_owned(),
+                ToDo => block.get("checked").unwrap().to_owned(),
+                Callout => block.get("icon").unwrap().to_owned(),
+                Code => block.get("language").unwrap().to_owned(),
+                _ => Value::default(),
+            }
+        };
+
+        Ok(Block { line, line_type, color, child, status })
     }
 }
