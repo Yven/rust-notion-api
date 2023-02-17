@@ -15,7 +15,7 @@ pub struct Author {
 
 impl Author {
     pub fn new(property_list: &Value) -> Self {
-        let author = get_property_value(property_list, "Author");
+        let author = get_property_value(property_list, Some("Author"));
         Author {
             id: get_value_str(author, "id"),
             name: get_value_str(author, "name"),
@@ -66,7 +66,7 @@ impl Page {
             editor_id: get_value_str(&page["last_edited_by"], "id"),
             cover: get_value_str(page, "cover"),
             icon: get_value_str(page, "icon"),
-            title: get_value_str(get_property_value(property_list, "Name").get(0).unwrap(), "plain_text"),
+            title: get_value_str(get_property_value(property_list, Some("Name")).get(0).unwrap(), "plain_text"),
             archived: page["archived"].as_bool().unwrap(),
             url: get_value_str(page, "url"),
             properties,

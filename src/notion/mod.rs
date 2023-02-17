@@ -129,9 +129,13 @@ impl Request {
 /**
  * 获取Notion属性数组中的属性值
  */
-fn get_property_value<'a>(property: &'a Value, index: &str) -> &'a Value {
-    let property_type = property[index]["type"].as_str().unwrap().to_string();
-    &property[index][property_type]
+fn get_property_value<'a>(property: &'a Value, index: Option<&str>) -> &'a Value {
+    let property = match index {
+        Some(i) => &property[i],
+        None => property,
+    };
+
+    &property[get_value_str(property, "type")]
 }
 
 /**
@@ -139,7 +143,7 @@ fn get_property_value<'a>(property: &'a Value, index: &str) -> &'a Value {
  */
 fn get_value_str(value: &Value, index: &str) -> String {
     match value[index].as_str() {
-        None => "".to_string(),
+        None => String::default(),
         Some(s) => s.to_string(),
     }
 }

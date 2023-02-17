@@ -2,20 +2,29 @@ use std::str::FromStr;
 
 use strum_macros::{Display as EnumDisplay, EnumString};
 use serde_json::Value;
-use super::{CommErr, get_value_str};
+use super::{CommErr, get_value_str, get_property_value};
 
 
 #[derive(EnumDisplay, EnumString, Debug)]
 #[strum(serialize_all = "snake_case")] 
 pub enum BlockType {
+    // rich text
     Paragraph,
+    #[strum(serialize="heading_1")]
     Heading1,
+    #[strum(serialize="heading_2")]
     Heading2,
+    #[strum(serialize="heading_3")]
     Heading3,
     BulletedListItem,
     NumberedListItem,
     ToDo,
     Toggle,
+    Callout,
+    Quote,
+    Template,
+    Code,
+    // special
     ChildPage,
     ChildDatabase,
     Embed,
@@ -24,8 +33,6 @@ pub enum BlockType {
     File,
     Pdf,
     Bookmark,
-    Callout,
-    Quote,
     Equation,
     Divider,
     TableOfContents,
@@ -33,12 +40,10 @@ pub enum BlockType {
     ColumnList,
     LinkPreview,
     SyncedBlock,
-    Template,
     LinkToPage,
     Table,
     TableRow,
     Unsupported,
-    Code,
 }
 
 #[derive(EnumDisplay, EnumString, Debug)]
@@ -95,6 +100,40 @@ pub struct RichText {
     pub href: String,
     pub annotation: Vec<Annotation>,
 }
+impl RichText {
+    pub fn new(v: &Value) -> Self {
+        let text = get_value_str(v, "plain_text");
+        let href = match v.get("href") {
+            None => String::default(),
+            Some(href) => {
+                if href.is_null() {
+                    String::default()
+                } else {
+                    href.as_str().unwrap().to_string()
+                }
+            }
+        };
+
+        let anno= v["annotations"].as_object().unwrap();
+        let mut annotation: Vec<Annotation> = Vec::new();
+        for (anno_key, anno_val) in anno.iter() {
+            if anno_key == "color" {
+                annotation.push(Annotation::from_str(anno_key).unwrap().reset_val(anno_val.as_str().unwrap()));
+                continue;
+            } 
+            match anno_val.as_bool() {
+                Some(anno_val) => {
+                    if anno_val {
+                        annotation.push(Annotation::from_str(anno_key).unwrap());
+                    }
+                },
+                _ => continue,
+            }
+        }
+
+        RichText { text, href, annotation }
+    }
+}
 
 #[derive(Debug)]
 pub struct Block {
@@ -104,53 +143,31 @@ pub struct Block {
 }
 
 impl Block {
+    pub fn new(line_type: BlockType) -> Self {
+        Block { line: Vec::new(), line_type, color: AnnoColor::Default }
+    }
+
     pub fn from_value(value: &Value) -> Result<Self, CommErr> {
         if !value.is_object() {
             return Err(CommErr::CErr("paramter format Wrong!".to_string()));
         }
 
-        let line_type = get_value_str(value, "type");
-        let block = value.as_object().unwrap().get(&line_type).unwrap();
-        let line_type = match line_type.as_str() {
-            "heading_1"|"heading_2"|"heading_3" => line_type.replace("_", ""),
-            _ => line_type,
-        };
-        let line_type = BlockType::from_str(&line_type).unwrap();
+        let block = get_property_value(value, None);
+
+        let line_type = BlockType::from_str(&get_value_str(value, "type")).unwrap();
 
         if let BlockType::Divider = line_type {
-            return Ok(Block {
-                line: Vec::new(),
-                line_type: BlockType::Divider,
-                color: AnnoColor::Default,
-            });
+            return Ok(Block::new(line_type));
         }
 
-        let rich_text = block.get("rich_text").unwrap().as_array().unwrap();
+        let rich_text = match block.get("rich_text") {
+            Some(r) => r.as_array().unwrap(),
+            None => return Err(CommErr::CErr("Unsupport Notion Paragraph Format to Reading for now!".to_string())),
+        };
 
         let mut line: Vec<RichText> = Vec::new();
         for v in rich_text.iter() {
-            let text= v.get(get_value_str(v, "type")).unwrap();
-            let href = if text.get("link").unwrap().is_null() {
-                String::default()
-            } else {
-                text.get("link").unwrap().get("url").unwrap().as_str().unwrap().to_string()
-            };
-
-            let anno= v.get("annotations").unwrap().as_object().unwrap();
-            let mut annotation: Vec<Annotation> = Vec::new();
-            for (anno_key, anno_val) in anno.iter() {
-                if anno_key == "color" {
-                    annotation.push(Annotation::from_str(anno_key).unwrap().reset_val(anno_val.as_str().unwrap()));
-                } else if anno_val.as_bool().unwrap() == true {
-                    annotation.push(Annotation::from_str(anno_key).unwrap());
-                }
-            }
-
-            line.push(RichText {
-                text: get_value_str(text, "content"),
-                href,
-                annotation,
-            });
+            line.push(RichText::new(v));
         }
 
         let line_color = get_value_str(block, "color");
