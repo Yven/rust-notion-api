@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap};
 use std::str::FromStr;
 use serde_json::Value;
+use crate::notion::get_property_value;
+
 use super::get_value_str;
 use super::filter::Filter;
 use strum_macros::{Display as EnumDisplay, EnumString};
@@ -29,6 +31,12 @@ impl PropertyType {
     }
     pub fn does_not_equal(self, val: &str) -> Filter {
         Filter::new(self, ("does_not_equal".to_string(), val.to_string()))
+    }
+    pub fn contains(self, val: &str) -> Filter {
+        Filter::new(self, ("contains".to_string(), val.to_string()))
+    }
+    pub fn does_not_contain(self, val: &str) -> Filter {
+        Filter::new(self, ("does_not_contain".to_string(), val.to_string()))
     }
 
     pub fn get_name(&self) -> String {
@@ -82,32 +90,44 @@ pub struct Property {
 
 impl Property {
     pub fn new(key: &String, value: &Value) -> Self {
-        let mut property_data_opt: Vec<HashMap<String, String>> = Vec::new();
+        let data = get_property_value(value, None);
+        let property_type = get_value_str(value, "type");
 
-        let data = &value[value["type"].as_str().unwrap().to_string()];
         let data = if !data.is_array() {
-            vec![data]
-        } else {
-            let mut arr_v = Vec::new();
-            for v in data.as_array().unwrap().iter() {
-                arr_v.push(v);
+            vec![data] 
+        } else { 
+            let mut vm = Vec::new();
+            for v in data.as_array().unwrap() {
+                vm.push(v)
             }
-
-            arr_v
+            vm
         };
 
+        let mut property_data_opt = Vec::new();
         for arr_val in data.iter() {
-            let mut elem: HashMap<String, String> = HashMap::new();
-            for (k, v) in arr_val.as_object().unwrap().iter() {
-                if v.is_null() {
-                    continue;
+            let arr_val = if !arr_val.is_object() {
+                vec![(get_value_str(value, "type"), *arr_val)]
+            } else {
+                let mut vm = Vec::new();
+                for (k, v) in arr_val.as_object().unwrap().iter() {
+                    vm.push((k.to_string(), v))
                 }
-                elem.insert(k.to_string(), get_value_str(arr_val, k));
+                vm
+            };
+
+            for (k, v) in arr_val.iter() {
+                let v = if v.is_null() {
+                    String::default()
+                } else {
+                    v.as_str().unwrap().to_string()
+                };
+                let mut hm = HashMap::new();
+                hm.insert(k.to_string(), v);
+                property_data_opt.push(hm);
             }
-            property_data_opt.push(elem);
         }
 
-        let property = PropertyType::from_str(&get_value_str(value, "type")).unwrap().reset_val(key.to_string());
+        let property = PropertyType::from_str(&property_type).unwrap().reset_val(key.to_string());
 
         Property {
             property,

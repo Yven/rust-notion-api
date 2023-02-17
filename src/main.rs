@@ -2,8 +2,8 @@ use notion_api::notion::database;
 use notion_api::notion::{term, sort, property};
 
 fn main() {
-    let s1 = property::PropertyType::Status("Status".to_string()).does_not_equal("conception");
-    let s2 = property::PropertyType::Status("Status".to_string()).does_not_equal("edit");
+    let s1 = property::PropertyType::Status("Status".to_string()).equals("archive");
+    let s2 = property::PropertyType::MultiSelect("Tag".to_string()).contains("test");
     let filter = s1.and(s2);
 
     let sort = sort::Sort::new(vec![

@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use strum_macros::{Display as EnumDisplay, EnumString};
 use serde_json::Value;
-use super::{CommErr, get_value_str, get_property_value};
+use super::{CONFIG_MAP, Request, NotionModule, CommErr, get_value_str, get_property_value};
 
 
 #[derive(EnumDisplay, EnumString, Debug)]
@@ -140,11 +140,21 @@ pub struct Block {
     pub line: Vec<RichText>,
     pub line_type: BlockType,
     pub color: AnnoColor,
+    pub child: Vec<Block>,
 }
 
 impl Block {
     pub fn new(line_type: BlockType) -> Self {
-        Block { line: Vec::new(), line_type, color: AnnoColor::Default }
+        Block { line: Vec::new(), line_type, color: AnnoColor::Default, child: Vec::new() }
+    }
+
+    pub fn from_text(line_type: BlockType, text: String) -> Self {
+        Block {
+            line: vec![ RichText { text, href: String::default(), annotation: Vec::new() } ],
+            line_type,
+            color: AnnoColor::default(),
+            child: Vec::new(),
+        }
     }
 
     pub fn from_value(value: &Value) -> Result<Self, CommErr> {
@@ -156,8 +166,10 @@ impl Block {
 
         let line_type = BlockType::from_str(&get_value_str(value, "type")).unwrap();
 
-        if let BlockType::Divider = line_type {
-            return Ok(Block::new(line_type));
+        match line_type {
+            BlockType::Divider => return Ok(Block::new(line_type)),
+            BlockType::Equation => return Ok(Block::from_text(line_type, get_value_str(block, "expression"))),
+            _ => (),
         }
 
         let rich_text = match block.get("rich_text") {
@@ -177,6 +189,17 @@ impl Block {
             AnnoColor::default()
         };
 
-        Ok(Block { line, line_type, color })
+        let mut child = Vec::new();
+        if value.get("has_children").unwrap().as_bool().unwrap() {
+            let key = CONFIG_MAP.get("key").unwrap();
+            let request = Request::new(key);
+            let response = request.get(NotionModule::Blocks, &get_value_str(value, "id")).unwrap();
+            let list = response["results"].as_array().unwrap();
+            for v in list.iter() {
+                child.push(Block::from_value(v)?);
+            }
+        }
+
+        Ok(Block { line, line_type, color, child })
     }
 }
