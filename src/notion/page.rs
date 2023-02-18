@@ -85,8 +85,8 @@ impl Page {
 
         let mut content = String::default();
         for line in self.content.iter() {
-            content = content + "\n" + &line.to_string();
+            content = content.trim_end().to_string() + "\n" + &line.to_string();
         }
-        content
+        content.trim().to_string()
     }
 }

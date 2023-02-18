@@ -188,8 +188,7 @@ impl RichText {
                 _ => (&anno_format).replace("{}", anno.get_str("md").unwrap()),
             };
         }
-        let text = if self.text.is_empty() { println!("{:#?}", self);"<br/>" } else { &self.text };
-        anno_format.replace("{}", text)
+        anno_format.replace("{}", &self.text)
     }
 }
 
@@ -281,8 +280,12 @@ impl Block {
 impl FmtDisplay for Block {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut paragraph = String::default();
-        for text in self.line.iter() {
-            paragraph += &text.to_string();
+        if self.line.is_empty() {
+            paragraph = "<br/>".to_string();
+        } else {
+            for text in self.line.iter() {
+                paragraph += &text.to_string();
+            }
         }
 
         let format = self.line_type.get_str("md").unwrap();
@@ -298,23 +301,24 @@ impl FmtDisplay for Block {
         paragraph = format.replace("{}", &paragraph).replace("{status}", status_to_replace);
 
         paragraph = match self.line_type {
-            BlockType::Callout => paragraph.replace("\n", "<br/>"),
-            BlockType::Quote|BlockType::Equation|BlockType::Paragraph => "\n".to_string() + &paragraph + "\n",
+            BlockType::Callout => "\n".to_string() + &paragraph.replace("\n", "<br/>") + "\n",
+            BlockType::Quote => "\n".to_string() + &paragraph.replace("\n", "<br/>") + "\n",
+            BlockType::Heading1|BlockType::Heading2|BlockType::Heading3|BlockType::Code|BlockType::Toggle|BlockType::Equation|BlockType::Paragraph => "\n".to_string() + &paragraph + "\n",
             _ => paragraph,
+
         };
 
         let mut child_paragraph = String::default();
         if !self.child.is_empty() {
             for child in self.child.iter() {
-                child_paragraph = if child_paragraph.is_empty() { child_paragraph } else { child_paragraph + "\n\t"} + &child.to_string();
+                child_paragraph = if child_paragraph.is_empty() { child_paragraph } else { child_paragraph + "\n"} + &child.to_string();
             }
-
-            println!("{:#?}", child_paragraph);
 
             paragraph = match self.line_type {
                 BlockType::Toggle => paragraph.replace("{child}", &child_paragraph),
                 BlockType::Quote => paragraph.trim_end().to_string() + "\n>" + &child_paragraph.trim_start(),
-                _ => paragraph + "\n\t" + &child_paragraph,
+                BlockType::Heading1|BlockType::Heading2|BlockType::Heading3 => paragraph + &child_paragraph,
+                _ => paragraph.trim_end().to_string() + "\n\t" + &child_paragraph.replace("\n\n", "\n").replace("\n", "\n\t"),
             };
         }
 
@@ -322,10 +326,11 @@ impl FmtDisplay for Block {
             AnnoColor::Default => paragraph,
             _ => {
                 let color_format = Annotation::Color(AnnoColor::Default).get_str("md").unwrap();
-                color_format.replace("{}", &paragraph).replace("{color}", self.color.get_str("md").unwrap())
+                "\n".to_string() + &color_format.replace("{}", &paragraph).replace("{color}", self.color.get_str("md").unwrap()) + "\n"
             },
         };
 
+        println!("{:#?}", paragraph);
         write!(f, "{}", paragraph)
     }
 }

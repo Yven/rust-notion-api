@@ -7,7 +7,7 @@
 
 ## 特性
 - [x] 调用Notion API获取页面内容
-- [ ] 输出页面为Markdown
+- [x] 输出页面为Markdown
 - [ ] 输出页面为HTML
 - [ ] 作为rust-lib调用
 - [ ] 使用命令行调用
@@ -34,6 +34,7 @@ cargo run
 - [ ] 不同的block|rich_text附带的属性特殊处理
 - [ ] 优化property::new()方法
 - [ ] 优化递归
+- [ ] 优化各结构to_string方法
 - [ ] <del>常用函数整理为宏</del>
 - [ ] 整理结构和调用关系（调整notion模块的结构）
 - [ ] 完成筛选模块中属性的其他匹配方法
@@ -41,7 +42,7 @@ cargo run
 - [ ] Page/Database结构和方法
 - [ ] 请求分页参数处理
 - [ ] 统一错误结构
-- [ ] markdown格式映射
+- [x] markdown格式映射
 
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
