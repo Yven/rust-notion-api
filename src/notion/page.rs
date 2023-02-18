@@ -77,12 +77,16 @@ impl Page {
 //     pub fn from_remote(key: String, id: String) -> Self {
 //     }
 
-    pub fn content(&mut self) {
+    pub fn content(&mut self) -> String {
         let response = Request::new().get(NotionModule::Blocks, &self.id).unwrap();
         for val in response["results"].as_array().unwrap().iter() {
             self.content.push(Block::from_value(val).unwrap());
         }
 
-        println!("{:#?}", self.content);
+        let mut content = String::default();
+        for line in self.content.iter() {
+            content = content + "\n" + &line.to_string();
+        }
+        content
     }
 }

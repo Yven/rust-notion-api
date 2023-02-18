@@ -11,8 +11,12 @@ fn main() {
     ]);
 
     let body = term::ReqBody::new(filter, sort);
-    // let request = notion::Request::new(&key);
-    // let _response = request.query(notion::NotionModule::Databases, &db_id, body);
     let mut db = database::Database::from_remote(notion_api::CONFIG_MAP.get("db_id").unwrap(), body);
-    db.page_list[0].content();
+    let content = db.page_list[0].content();
+
+    let path = env!("CARGO_MANIFEST_DIR").to_string() + "/output.md";
+    match std::fs::write(path, content) {
+        Ok(_) => (),
+        Err(e) => println!("{:#?}", e),
+    }
 }

@@ -1,30 +1,47 @@
 use std::str::FromStr;
+use std::fmt::Display as FmtDisplay;
 
-use strum_macros::{Display as EnumDisplay, EnumString};
+use strum::EnumProperty;
+use strum_macros::{Display as Enumdisplay, EnumString};
 use serde_json::Value;
 use super::{Request, NotionModule, CommErr, get_value_str, get_property_value};
 
 
-#[derive(EnumDisplay, EnumString, Debug)]
+#[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
 #[strum(serialize_all = "snake_case")] 
 pub enum BlockType {
     // rich text
+    #[strum(props(md="{}"))]
     Paragraph,
     #[strum(serialize="heading_1")]
+    #[strum(props(md="# {}"))]
     Heading1,
     #[strum(serialize="heading_2")]
+    #[strum(props(md="## {}"))]
     Heading2,
     #[strum(serialize="heading_3")]
+    #[strum(props(md="### {}", cmd="false"))]
     Heading3,
+    #[strum(props(md="* {}"))]
     BulletedListItem,
+    #[strum(props(md="1. {}"))]
     NumberedListItem,
+    #[strum(props(md="- [{status}] {}", cmd="false"))]
     ToDo,
+    #[strum(props(md="<details><summary>{}</summary>{child}</details>", cmd="false"))]
     Toggle,
+    #[strum(props(md="<aside>{status}{}</aside>", cmd="false"))]
     Callout,
+    #[strum(props(md="> {}"))]
     Quote,
-    Template,
+    #[strum(props(md="```{status}\n{}\n```"))]
     Code,
     // special
+    #[strum(props(md="---"))]
+    Divider,
+    #[strum(props(md="$${}$$"))]
+    Equation,
+    Template,
     ChildPage,
     ChildDatabase,
     Embed,
@@ -33,8 +50,6 @@ pub enum BlockType {
     File,
     Pdf,
     Bookmark,
-    Equation,
-    Divider,
     TableOfContents,
     Column,
     ColumnList,
@@ -46,14 +61,20 @@ pub enum BlockType {
     Unsupported,
 }
 
-#[derive(EnumDisplay, EnumString, Debug)]
+#[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
 #[strum(serialize_all = "snake_case")] 
 pub enum Annotation {
+    #[strum(props(md="**{}**", mdrpl="__{}__"))]
     Bold,
+    #[strum(props(md="*{}*", mdrpl="_{}_"))]
     Italic,
+    #[strum(props(md="<del>{}</del>", cmd="false"))]
     Strikethrough,
+    #[strum(props(md="<u>{}</u>", cmd="false"))]
     Underline,
+    #[strum(props(md="`{}`"))]
     Code,
+    #[strum(props(md="<font {color}>{}</font>"))]
     Color(AnnoColor),
 }
 
@@ -70,27 +91,45 @@ impl Annotation {
 }
 
 
-#[derive(EnumDisplay, EnumString, Default, Debug)]
+#[derive(Enumdisplay, EnumString, EnumProperty, Default, Debug)]
 #[strum(serialize_all = "snake_case")] 
 pub enum AnnoColor {
     #[default] Default,
+    #[strum(props(md="color=blue"))]
     Blue,
+    #[strum(props(md="style=background:blue"))]
     BlueBackground,
+    #[strum(props(md="color=brown"))]
     Brown,
+    #[strum(props(md="style=background:brown"))]
     BrownBackground,
+    #[strum(props(md="color=gray"))]
     Gray,
+    #[strum(props(md="style=background:gray"))]
     GrayBackground,
+    #[strum(props(md="color=green"))]
     Green,
+    #[strum(props(md="style=background:green"))]
     GreenBackground,
+    #[strum(props(md="color=orange"))]
     Orange,
-    RangeBackground,
+    #[strum(props(md="style=background:orange"))]
+    OrangeBackground,
+    #[strum(props(md="color=pink"))]
     Pink,
+    #[strum(props(md="style=background:pink"))]
     PinkBackground,
+    #[strum(props(md="color=purple"))]
     Purple,
+    #[strum(props(md="style=background:purple"))]
     PurpleBackground,
+    #[strum(props(md="color=red"))]
     Red,
+    #[strum(props(md="style=background:red"))]
     RedBackground,
+    #[strum(props(md="color=yellow"))]
     Yellow,
+    #[strum(props(md="style=background:yellow"))]
     YellowBackground,
 }
 
@@ -132,6 +171,31 @@ impl RichText {
         }
 
         RichText { text, href, annotation }
+    }
+
+    fn build_anno(&self) -> String {
+        let mut anno_format = "{}".to_string();
+        let mut conflict = false;
+        for anno in self.annotation.iter() {
+            anno_format = match anno {
+                Annotation::Color(AnnoColor::Default) => anno_format,
+                Annotation::Color(c) => (&anno_format).replace("{}", anno.get_str("md").unwrap()).replace("{color}", c.get_str("md").unwrap()),
+                Annotation::Bold|Annotation::Italic => {
+                    let anno_prop = if !conflict { conflict = true; "md" } else { "mdrpl" };
+                    (&anno_format).replace("{}", anno.get_str(anno_prop).unwrap())
+                },
+                Annotation::Code => anno.get_str("md").unwrap().to_string(),
+                _ => (&anno_format).replace("{}", anno.get_str("md").unwrap()),
+            };
+        }
+        let text = if self.text.is_empty() { println!("{:#?}", self);"<br/>" } else { &self.text };
+        anno_format.replace("{}", text)
+    }
+}
+
+impl FmtDisplay for RichText {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.build_anno())
     }
 }
 
@@ -211,5 +275,57 @@ impl Block {
         };
 
         Ok(Block { line, line_type, color, child, status })
+    }
+}
+
+impl FmtDisplay for Block {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut paragraph = String::default();
+        for text in self.line.iter() {
+            paragraph += &text.to_string();
+        }
+
+        let format = self.line_type.get_str("md").unwrap();
+        let status_to_replace = if !self.status.is_null() {
+            if self.status.is_boolean() {
+                if self.status.as_bool().unwrap() { "x" } else { " " }
+            } else if self.status.is_object() {
+                get_property_value(&self.status, None).as_str().unwrap()
+            } else {
+                self.status.as_str().unwrap()
+            }
+        } else { "" };
+        paragraph = format.replace("{}", &paragraph).replace("{status}", status_to_replace);
+
+        paragraph = match self.line_type {
+            BlockType::Callout => paragraph.replace("\n", "<br/>"),
+            BlockType::Quote|BlockType::Equation|BlockType::Paragraph => "\n".to_string() + &paragraph + "\n",
+            _ => paragraph,
+        };
+
+        let mut child_paragraph = String::default();
+        if !self.child.is_empty() {
+            for child in self.child.iter() {
+                child_paragraph = if child_paragraph.is_empty() { child_paragraph } else { child_paragraph + "\n\t"} + &child.to_string();
+            }
+
+            println!("{:#?}", child_paragraph);
+
+            paragraph = match self.line_type {
+                BlockType::Toggle => paragraph.replace("{child}", &child_paragraph),
+                BlockType::Quote => paragraph.trim_end().to_string() + "\n>" + &child_paragraph.trim_start(),
+                _ => paragraph + "\n\t" + &child_paragraph,
+            };
+        }
+
+        paragraph = match self.color {
+            AnnoColor::Default => paragraph,
+            _ => {
+                let color_format = Annotation::Color(AnnoColor::Default).get_str("md").unwrap();
+                color_format.replace("{}", &paragraph).replace("{color}", self.color.get_str("md").unwrap())
+            },
+        };
+
+        write!(f, "{}", paragraph)
     }
 }
