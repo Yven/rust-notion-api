@@ -34,7 +34,7 @@ cargo run
 - [ ] 不同的block|rich_text附带的属性特殊处理
 - [ ] 优化property::new()方法
 - [ ] 优化递归
-- [ ] 优化各结构to_string方法
+- [x] 优化各结构to_string方法
 - [ ] <del>常用函数整理为宏</del>
 - [ ] 整理结构和调用关系（调整notion模块的结构）
 - [ ] 完成筛选模块中属性的其他匹配方法
