@@ -2,6 +2,17 @@ use notion_api::notion::database;
 use notion_api::notion::{term, sort, property};
 
 fn main() {
+    // let page_list = notion::Notion::Databases(id)
+    //     .filter(Property::Status(“Status”).equals(“Published”).and(Property::Author(“author”).contains(“Yven”))
+    //     .sort(Property::EditTime(“Edit Time”).desc())
+    //     .search();
+
+    // let property = page_list[i].find();
+    // let content = page_list[i].fulltext();
+
+    // content.markdown(page_list[i].title);
+    // content.html();
+
     let s1 = property::PropertyType::Status("Status".to_string()).equals("archive");
     let s2 = property::PropertyType::MultiSelect("Tag".to_string()).contains("test");
     let filter = s1.and(s2);
