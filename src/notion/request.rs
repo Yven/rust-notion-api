@@ -1,15 +1,15 @@
 use super::CONFIG_MAP;
-use super::{term::ReqBody, Notion, Module, get_value_str, error::CommErr};
+use super::{Module, get_value_str, error::CommErr};
 use std::time::Duration;
 use reqwest::{self, header::{HeaderMap, HeaderValue, CONTENT_TYPE}};
 use serde_json::Value;
 
 
-const NOTION_URL: &str = "https://api.notion.com/v1/";
 const REQ_TIME_S: u64 = 10;
 const REQ_TIME_NS: u32 = 0;
 
 
+#[allow(dead_code)]
 enum RequestMethod {
     GET,
     POST,
@@ -20,13 +20,15 @@ enum RequestMethod {
 
 #[allow(dead_code)]
 pub struct Request {
+    url: String,
     secret_key: String,
     path: String,
 }
 
 impl Request {
-    pub fn new(module: &Module) -> Self {
+    pub fn new(module: Module) -> Self {
         Request {
+            url: CONFIG_MAP.get("url").unwrap().to_string(),
             secret_key: CONFIG_MAP.get("key").unwrap().to_string(),
             path: module.path(),
         }
@@ -34,13 +36,13 @@ impl Request {
 
     fn request(&self, method: RequestMethod, body: Value) -> Result<Value, CommErr> {
         let client = reqwest::blocking::Client::new();
+        let path = self.url.to_owned() + &self.path;
         let client = match method {
-            RequestMethod::GET => client.get(NOTION_URL.to_string() + &self.path),
+            RequestMethod::GET => client.get(path),
             RequestMethod::POST => {
-                // let body = serde_json::from_str::<serde_json::Value>(&body.to_string()).unwrap();
-                client.post(NOTION_URL.to_string() + &self.path).json(&body)
+                client.post(path).json(&body)
             },
-            _ => client.get(NOTION_URL.to_string() + &self.path),
+            _ => client.get(path),
         };
 
         let res = client.bearer_auth(&self.secret_key)
@@ -59,7 +61,7 @@ impl Request {
 
     fn get_header(&self) -> HeaderMap {
         let mut header = HeaderMap::new();
-        header.insert("Notion-Version", "2022-06-28".parse().unwrap());
+        header.insert("Notion-Version", CONFIG_MAP.get("version").unwrap().parse().unwrap());
         header.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         header
     }
@@ -69,7 +71,7 @@ impl Request {
     }
 
     pub fn get(&self) -> Result<Value, CommErr> {
-        self.request(RequestMethod::GET)
+        self.request(RequestMethod::GET, Value::default())
     }
 
     // fn save(&self, module: NotionModule) {

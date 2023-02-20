@@ -1,4 +1,5 @@
-use super::{Request, page::Page, term::ReqBody, NotionModule};
+use super::{request::Request, page::Page, Module, Model, get_value_str};
+use serde_json::Value;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -8,14 +9,19 @@ pub struct Database {
 }
 
 impl Database {
-    // pub fn new(list: &Vec<Value>) -> Self {
-    pub fn from_remote(id: &str, body: ReqBody) -> Self {
-        let response = Request::new().query(NotionModule::Databases, id, body).unwrap();
+    pub fn new(id: &str, body: Value) -> Self {
+        let response = Request::new(Module::Databases(id.to_string())).query(body).unwrap();
         let mut page_list = Vec::new();
         for page in response["results"].as_array().unwrap().iter() {
             page_list.push(Page::new(page));
         }
 
         Database { page_list }
+    }
+}
+
+impl Model for Database {
+    fn from_remote(body: Value) -> Self {
+        Database::new(&get_value_str(&body, "id"), body)
     }
 }

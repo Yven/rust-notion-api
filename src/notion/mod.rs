@@ -1,6 +1,5 @@
 pub mod page;
 pub mod database;
-pub mod term;
 pub mod error;
 pub mod sort;
 pub mod filter;
@@ -9,12 +8,19 @@ pub mod block;
 pub mod request;
 
 
+use self::{database::Database, sort::Direction};
+
 use super::CONFIG_MAP;
 use filter::Filter;
 use sort::Sort;
 
 use error::CommErr;
 use serde_json::Value;
+
+
+trait Model {
+    fn from_remote(val: Value) -> Self;
+}
 
 
 #[allow(dead_code)]
@@ -34,6 +40,19 @@ impl Module {
             Module::Users(id) => "users/".to_string() + &id,
         }
     }
+
+    pub fn get_name(&self) -> String {
+        {
+            use Module::*;
+            match self {
+                Databases(s) |
+                Pages(s) |
+                Blocks(s) |
+                Users(s) => s.to_string()
+            }
+        }
+    }
+
 }
 
 
@@ -44,27 +63,28 @@ pub struct Notion {
 }
 
 impl Notion {
-    fn new(module: Module) -> Self {
-        Notion { module, filter: Filter::default(), sort::default() }
+    pub fn new(module: Module) -> Self {
+        Notion { module, filter: Filter::default(), sort: Sort::default() }
     }
 
-    pub fn filter(self, condition: Filter) -> Self {
+    pub fn filter(mut self, condition: Filter) -> Self {
         self.filter = condition;
         self
     }
 
-    pub fn sort(self, order: Sort) -> Self {
-        self.sort = order;
+    pub fn sort(mut self, order: Vec<(String, Direction)>) -> Self {
+        self.sort = Sort::new(order);
         self
     }
 
-    // pub fn search(&self) -> T {
-    // }
+    pub fn search(&self) -> Database {
+        Database::new(&self.module.get_name(), self.format_body())
+    }
 
     // pub fn find(&self) -> T {
     // }
 
-    fn format_body(&self) -> Value {
+    pub fn format_body(&self) -> Value {
         serde_json::from_str::<serde_json::Value>(&format!(r#"{{"filter": {},"sorts": {}}}"#, self.filter, self.sort)).unwrap()
     }
 }

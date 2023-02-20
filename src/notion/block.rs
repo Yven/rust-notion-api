@@ -4,7 +4,7 @@ use std::fmt::Display as FmtDisplay;
 use strum::EnumProperty;
 use strum_macros::{Display as Enumdisplay, EnumString};
 use serde_json::Value;
-use super::{Request, NotionModule, CommErr, get_value_str, get_property_value};
+use super::{request::Request, Module, CommErr, get_value_str, get_property_value};
 
 
 #[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
@@ -256,7 +256,7 @@ impl Block {
 
         let mut child = Vec::new();
         if value.get("has_children").unwrap().as_bool().unwrap() {
-            let response = Request::new().get(NotionModule::Blocks, &get_value_str(value, "id")).unwrap();
+            let response = Request::new(Module::Blocks(get_value_str(value, "id"))).get().unwrap();
             for v in response["results"].as_array().unwrap().iter() {
                 child.push(Block::from_value(v)?);
             }

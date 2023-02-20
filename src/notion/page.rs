@@ -1,4 +1,4 @@
-use super::{Request, NotionModule, get_property_value, get_value_str, property::Property, block::Block};
+use super::{request::Request, Module, get_property_value, get_value_str, property::Property, block::Block, Model};
 use serde_json::Value;
 
 
@@ -78,7 +78,7 @@ impl Page {
 //     }
 
     pub fn content(&mut self) -> String {
-        let response = Request::new().get(NotionModule::Blocks, &self.id).unwrap();
+        let response = Request::new(Module::Blocks(self.id.to_string())).get().unwrap();
         for val in response["results"].as_array().unwrap().iter() {
             self.content.push(Block::from_value(val).unwrap());
         }
@@ -88,5 +88,11 @@ impl Page {
             content = content.trim_end().to_string() + "\n" + &line.to_string();
         }
         content.trim().to_string()
+    }
+}
+
+impl Model for Page {
+    fn from_remote(page: Value) -> Self {
+        Page::new(&page)
     }
 }

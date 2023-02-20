@@ -17,6 +17,12 @@ impl Sort {
     }
 }
 
+impl Default for Sort {
+    fn default() -> Self {
+        Sort { map: HashMap::new() }
+    }
+}
+
 impl FmtDisplay for Sort {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::from("");
