@@ -15,11 +15,15 @@ use filter::Filter;
 use sort::Sort;
 
 use error::CommErr;
-use serde_json::Value;
+pub use serde_json::Value as Json;
 
 
-trait Model {
-    fn from_remote(val: Value) -> Self;
+trait ImpRequest {
+    fn search(id: String, val: Json) -> Self;
+    // fn find(&self, val: Json) -> Self;
+    // fn save(&self, val: Json) -> Self;
+    // fn update(&self, val: Json) -> Self;
+    // fn delete(&self, val: Json) -> Self;
 }
 
 
@@ -78,14 +82,14 @@ impl Notion {
     }
 
     pub fn search(&self) -> Database {
-        Database::new(&self.module.get_name(), self.format_body())
+        Database::search(self.module.get_name(), self.format_body())
     }
 
     // pub fn find(&self) -> T {
     // }
 
-    pub fn format_body(&self) -> Value {
-        serde_json::from_str::<serde_json::Value>(&format!(r#"{{"filter": {},"sorts": {}}}"#, self.filter, self.sort)).unwrap()
+    pub fn format_body(&self) -> Json {
+        serde_json::from_str::<Json>(&format!(r#"{{"filter": {},"sorts": {}}}"#, self.filter, self.sort)).unwrap()
     }
 }
 
@@ -93,7 +97,7 @@ impl Notion {
 /**
  * 获取Notion属性数组中的属性值
  */
-fn get_property_value<'a>(property: &'a Value, index: Option<&str>) -> &'a Value {
+fn get_property_value<'a>(property: &'a Json, index: Option<&str>) -> &'a Json {
     let property = match index {
         Some(i) => &property[i],
         None => property,
@@ -103,11 +107,10 @@ fn get_property_value<'a>(property: &'a Value, index: Option<&str>) -> &'a Value
 }
 
 /**
- * 获取Value中的某个值的String形式
+ * 获取Json中的某个值的String形式
  */
-fn get_value_str(value: &Value, index: &str) -> String {
-    match value[index].as_str() {
-        None => String::default(),
-        Some(s) => s.to_string(),
-    }
+fn get_value_str(value: &Json, index: &str) -> String {
+    value.get(index).expect(&format!("get_value_str() -> Do not exist [{}] in Json Data.", index))
+        .as_str().expect(&format!("get_value_str() -> Not a String Data this property [{}]", index))
+        .to_string()
 }
