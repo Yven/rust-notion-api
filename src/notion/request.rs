@@ -1,8 +1,6 @@
-use super::CONFIG_MAP;
-use super::{Module, get_value_str, error::CommErr};
+use super::{CONFIG_MAP, get_value_str, error::CommErr, Json};
 use std::time::Duration;
 use reqwest::{self, header::{HeaderMap, HeaderValue, CONTENT_TYPE}};
-use serde_json::Value;
 
 
 const REQ_TIME_S: u64 = 10;
@@ -10,15 +8,13 @@ const REQ_TIME_NS: u32 = 0;
 
 
 #[allow(dead_code)]
-enum RequestMethod {
+pub enum RequestMethod {
     GET,
     POST,
     PATCH,
     DELETE,
 }
 
-
-#[allow(dead_code)]
 pub struct Request {
     url: String,
     secret_key: String,
@@ -26,15 +22,15 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new(module: Module) -> Self {
+    pub fn new(path: String) -> Self {
         Request {
             url: CONFIG_MAP.get("url").unwrap().to_string(),
             secret_key: CONFIG_MAP.get("key").unwrap().to_string(),
-            path: module.path(),
+            path,
         }
     }
 
-    fn request(&self, method: RequestMethod, body: Value) -> Result<Value, CommErr> {
+    pub fn request(&self, method: RequestMethod, body: Json) -> Result<Json, CommErr> {
         let client = reqwest::blocking::Client::new();
         let path = self.url.to_owned() + &self.path;
         let client = match method {
@@ -51,7 +47,7 @@ impl Request {
             .send()?;
 
         let is_success = res.status().is_success();
-        let res: Value = serde_json::from_str(res.text()?.as_str())?;
+        let res: Json = serde_json::from_str(res.text()?.as_str())?;
         if is_success {
             Ok(res)
         } else {
@@ -66,13 +62,9 @@ impl Request {
         header
     }
 
-    pub fn query(&self, body: Value) -> Result<Value, CommErr> {
-        self.request(RequestMethod::POST, body)
-    }
-
-    pub fn get(&self) -> Result<Value, CommErr> {
-        self.request(RequestMethod::GET, Value::default())
-    }
+    // pub fn get(&self) -> Result<Json, CommErr> {
+    //     self.request(RequestMethod::GET, Json::default())
+    // }
 
     // fn save(&self, module: NotionModule) {
     // }

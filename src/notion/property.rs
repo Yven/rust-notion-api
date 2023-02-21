@@ -1,9 +1,8 @@
 use std::{collections::HashMap};
 use std::str::FromStr;
-use serde_json::Value;
 use crate::notion::get_property_value;
 
-use super::get_value_str;
+use super::{get_value_str, Json};
 use super::filter::Filter;
 use strum_macros::{Display as EnumDisplay, EnumString};
 
@@ -89,7 +88,7 @@ pub struct Property {
 }
 
 impl Property {
-    pub fn new(key: &String, value: &Value) -> Self {
+    pub fn new(key: &String, value: &Json) -> Self {
         let data = get_property_value(value, None);
         let property_type = get_value_str(value, "type");
 

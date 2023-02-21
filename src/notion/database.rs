@@ -1,5 +1,4 @@
-use super::{request::Request, page::Page, Module, Model, get_value_str};
-use serde_json::Value;
+use super::{request::Request, request::RequestMethod, page::Page, Module, ImpRequest, Json};
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -9,10 +8,9 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new(id: &str, body: Value) -> Self {
-        let response = Request::new(Module::Databases(id.to_string())).query(body).unwrap();
+    pub fn new(list: &Vec<Json>) -> Self {
         let mut page_list = Vec::new();
-        for page in response["results"].as_array().unwrap().iter() {
+        for page in list.iter() {
             page_list.push(Page::new(page));
         }
 
@@ -20,8 +18,9 @@ impl Database {
     }
 }
 
-impl Model for Database {
-    fn from_remote(body: Value) -> Self {
-        Database::new(&get_value_str(&body, "id"), body)
+impl ImpRequest for Database {
+    fn search(id: String, body: Json) -> Self {
+        let res = Request::new(Module::Databases(id).path()).request(RequestMethod::POST, body).unwrap();
+        Database::new(res["results"].as_array().unwrap())
     }
 }

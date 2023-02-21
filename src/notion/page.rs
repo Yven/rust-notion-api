@@ -1,5 +1,4 @@
-use super::{request::Request, Module, get_property_value, get_value_str, property::Property, block::Block, Model};
-use serde_json::Value;
+use super::{request::Request, request::RequestMethod, Module, get_property_value, get_value_str, property::Property, block::Block, Json, ImpRequest};
 
 
 // 作者信息
@@ -14,7 +13,7 @@ pub struct Author {
 }
 
 impl Author {
-    pub fn new(property_list: &Value) -> Self {
+    pub fn new(property_list: &Json) -> Self {
         let author = get_property_value(property_list, Some("Author"));
         Author {
             id: get_value_str(author, "id"),
@@ -45,8 +44,8 @@ pub struct Page {
 }
 
 impl Page {
-    pub fn new(page: &Value) -> Self {
-        let property_list = &page["properties"];
+    pub fn new(page: &Json) -> Self {
+        let property_list = page.get("properties").expect("Page:::new() -> Unsupport Pages Format!");
 
         let author = Author::new(property_list);
 
@@ -78,9 +77,9 @@ impl Page {
 //     }
 
     pub fn content(&mut self) -> String {
-        let response = Request::new(Module::Blocks(self.id.to_string())).get().unwrap();
+        let response = Request::new(Module::Blocks(self.id.to_string()).path()).request(RequestMethod::GET, Json::default()).unwrap();
         for val in response["results"].as_array().unwrap().iter() {
-            self.content.push(Block::from_value(val).unwrap());
+            self.content.push(Block::new(val).unwrap());
         }
 
         let mut content = String::default();
@@ -91,8 +90,9 @@ impl Page {
     }
 }
 
-impl Model for Page {
-    fn from_remote(page: Value) -> Self {
+impl ImpRequest for Page {
+    fn search(id: String, body: Json) -> Self {
+        let page = Request::new(Module::Pages(id).path()).request(RequestMethod::GET, body).unwrap();
         Page::new(&page)
     }
 }

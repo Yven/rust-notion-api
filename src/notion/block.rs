@@ -3,8 +3,7 @@ use std::fmt::Display as FmtDisplay;
 
 use strum::EnumProperty;
 use strum_macros::{Display as Enumdisplay, EnumString};
-use serde_json::Value;
-use super::{request::Request, Module, CommErr, get_value_str, get_property_value};
+use super::{request::Request, Module, CommErr, get_value_str, get_property_value, Json};
 
 
 #[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
@@ -140,7 +139,7 @@ pub struct RichText {
     pub annotation: Vec<Annotation>,
 }
 impl RichText {
-    pub fn new(v: &Value) -> Self {
+    pub fn new(v: &Json) -> Self {
         let text = get_value_str(v, "plain_text");
         let href = match v.get("href") {
             None => String::default(),
@@ -204,12 +203,12 @@ pub struct Block {
     pub line_type: BlockType,
     pub color: AnnoColor,
     pub child: Vec<Block>,
-    pub status: Value,
+    pub status: Json,
 }
 
 impl Block {
-    pub fn new(line_type: BlockType) -> Self {
-        Block { line: Vec::new(), line_type, color: AnnoColor::Default, child: Vec::new(), status: Value::default() }
+    pub fn from_type(line_type: BlockType) -> Self {
+        Block { line: Vec::new(), line_type, color: AnnoColor::Default, child: Vec::new(), status: Json::default() }
     }
 
     pub fn from_text(line_type: BlockType, text: String) -> Self {
@@ -218,11 +217,11 @@ impl Block {
             line_type,
             color: AnnoColor::default(),
             child: Vec::new(),
-            status: Value::default(),
+            status: Json::default(),
         }
     }
 
-    pub fn from_value(value: &Value) -> Result<Self, CommErr> {
+    pub fn new(value: &Json) -> Result<Self, CommErr> {
         if !value.is_object() {
             return Err(CommErr::CErr("paramter format Wrong!".to_string()));
         }
@@ -232,7 +231,7 @@ impl Block {
         let line_type = BlockType::from_str(&get_value_str(value, "type")).unwrap();
 
         match line_type {
-            BlockType::Divider => return Ok(Block::new(line_type)),
+            BlockType::Divider => return Ok(Block::from_type(line_type)),
             BlockType::Equation => return Ok(Block::from_text(line_type, get_value_str(block, "expression"))),
             _ => (),
         }
@@ -256,9 +255,9 @@ impl Block {
 
         let mut child = Vec::new();
         if value.get("has_children").unwrap().as_bool().unwrap() {
-            let response = Request::new(Module::Blocks(get_value_str(value, "id"))).get().unwrap();
+            let response = Request::new(Module::Blocks(get_value_str(value, "id")).path()).request(super::request::RequestMethod::GET, Json::default()).unwrap();
             for v in response["results"].as_array().unwrap().iter() {
-                child.push(Block::from_value(v)?);
+                child.push(Block::new(v)?);
             }
         }
 
@@ -269,7 +268,7 @@ impl Block {
                 ToDo => block.get("checked").unwrap().to_owned(),
                 Callout => block.get("icon").unwrap().to_owned(),
                 Code => block.get("language").unwrap().to_owned(),
-                _ => Value::default(),
+                _ => Json::default(),
             }
         };
 
