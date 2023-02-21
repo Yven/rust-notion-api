@@ -1,4 +1,5 @@
 use super::{request::Request, request::RequestMethod, page::Page, Module, ImpRequest, Json};
+use anyhow::{Result, anyhow};
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -8,19 +9,21 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new(list: &Vec<Json>) -> Self {
+    pub fn new(list: &Vec<Json>) -> Result<Self> {
         let mut page_list = Vec::new();
         for page in list.iter() {
-            page_list.push(Page::new(page));
+            page_list.push(Page::new(page)?);
         }
 
-        Database { page_list }
+        Ok(Database { page_list })
     }
 }
 
 impl ImpRequest for Database {
-    fn search(id: String, body: Json) -> Self {
-        let res = Request::new(Module::Databases(id).path()).request(RequestMethod::POST, body).unwrap();
-        Database::new(res["results"].as_array().unwrap())
+    fn search(id: String, body: Json) -> Result<Self> {
+        let res = Request::new(Module::Databases(id).path())?.request(RequestMethod::POST, body)?;
+        Database::new(res.get("results")
+            .ok_or(anyhow!("Notion API Response wrong format"))?.as_array()
+            .ok_or(anyhow!("Notion API Response wrong format"))?)
     }
 }
