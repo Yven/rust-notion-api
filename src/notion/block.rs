@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use std::fmt::Display as FmtDisplay;
+use anyhow::Result;
 
 use strum::EnumProperty;
 use strum_macros::{Display as Enumdisplay, EnumString};
@@ -139,8 +140,8 @@ pub struct RichText {
     pub annotation: Vec<Annotation>,
 }
 impl RichText {
-    pub fn new(v: &Json) -> Self {
-        let text = get_value_str(v, "plain_text");
+    pub fn new(v: &Json) -> Result<Self> {
+        let text = get_value_str(v, "plain_text")?;
         let href = match v.get("href") {
             None => String::default(),
             Some(href) => {
@@ -169,7 +170,7 @@ impl RichText {
             }
         }
 
-        RichText { text, href, annotation }
+        Ok(RichText { text, href, annotation })
     }
 
     fn build_anno(&self) -> String {
@@ -221,32 +222,32 @@ impl Block {
         }
     }
 
-    pub fn new(value: &Json) -> Result<Self, CommErr> {
+    pub fn new(value: &Json) -> Result<Self> {
         if !value.is_object() {
-            return Err(CommErr::CErr("paramter format Wrong!".to_string()));
+            return Err(CommErr::CErr("paramter format Wrong!".to_string()).into());
         }
 
-        let block = get_property_value(value, None);
+        let block = get_property_value(value, None)?;
 
-        let line_type = BlockType::from_str(&get_value_str(value, "type")).unwrap();
+        let line_type = BlockType::from_str(&get_value_str(value, "type")?)?;
 
         match line_type {
             BlockType::Divider => return Ok(Block::from_type(line_type)),
-            BlockType::Equation => return Ok(Block::from_text(line_type, get_value_str(block, "expression"))),
+            BlockType::Equation => return Ok(Block::from_text(line_type, get_value_str(block, "expression")?)),
             _ => (),
         }
 
         let rich_text = match block.get("rich_text") {
             Some(r) => r.as_array().unwrap(),
-            None => return Err(CommErr::CErr("Unsupport Notion Paragraph Format to Reading for now!".to_string())),
+            None => return Err(CommErr::CErr("Unsupport Notion Paragraph Format to Reading for now!".to_string()).into()),
         };
 
         let mut line: Vec<RichText> = Vec::new();
         for v in rich_text.iter() {
-            line.push(RichText::new(v));
+            line.push(RichText::new(v)?);
         }
 
-        let line_color = get_value_str(block, "color");
+        let line_color = get_value_str(block, "color")?;
         let color  = if !line_color.is_empty() {
             AnnoColor::from_str(&line_color).unwrap()
         } else {
@@ -255,7 +256,7 @@ impl Block {
 
         let mut child = Vec::new();
         if value.get("has_children").unwrap().as_bool().unwrap() {
-            let response = Request::new(Module::Blocks(get_value_str(value, "id")).path()).request(super::request::RequestMethod::GET, Json::default()).unwrap();
+            let response = Request::new(Module::Blocks(get_value_str(value, "id")?).path())?.request(super::request::RequestMethod::GET, Json::default())?;
             for v in response["results"].as_array().unwrap().iter() {
                 child.push(Block::new(v)?);
             }
