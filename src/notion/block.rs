@@ -1,10 +1,11 @@
 use std::str::FromStr;
 use std::fmt::Display as FmtDisplay;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
 use strum::EnumProperty;
 use strum_macros::{Display as Enumdisplay, EnumString};
-use super::{request::Request, Module, CommErr, get_value_str, get_property_value, Json};
+use super::{request::Request, Notion, CommErr, get_value_str, get_property_value, Json};
+use serde_json::Map;
 
 
 #[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
@@ -140,30 +141,33 @@ pub struct RichText {
     pub annotation: Vec<Annotation>,
 }
 impl RichText {
-    pub fn new(v: &Json) -> Result<Self> {
-        let text = get_value_str(v, "plain_text")?;
-        let href = match v.get("href") {
+    pub fn new(val: &Json) -> Result<Self> {
+        let text = get_value_str(val, "plain_text")?;
+        let href = match val.get("href") {
             None => String::default(),
             Some(href) => {
                 if href.is_null() {
                     String::default()
                 } else {
-                    href.as_str().unwrap().to_string()
+                    href.as_str().unwrap_or_default().to_string()
                 }
             }
         };
 
-        let anno= v["annotations"].as_object().unwrap();
+        let anno = match val.get("annotations").ok_or(anyhow!("RichText Format Wrong"))?.as_object() {
+            Some(obj) => obj.to_owned(),
+            None => Map::new(),
+        };
         let mut annotation: Vec<Annotation> = Vec::new();
         for (anno_key, anno_val) in anno.iter() {
             if anno_key == "color" {
-                annotation.push(Annotation::from_str(anno_key).unwrap().reset_val(anno_val.as_str().unwrap()));
+                annotation.push(Annotation::from_str(anno_key)?.reset_val(anno_val.as_str().unwrap()));
                 continue;
             } 
             match anno_val.as_bool() {
                 Some(anno_val) => {
                     if anno_val {
-                        annotation.push(Annotation::from_str(anno_key).unwrap());
+                        annotation.push(Annotation::from_str(anno_key)?);
                     }
                 },
                 _ => continue,
@@ -224,7 +228,7 @@ impl Block {
 
     pub fn new(value: &Json) -> Result<Self> {
         if !value.is_object() {
-            return Err(CommErr::CErr("paramter format Wrong!".to_string()).into());
+            return Err(CommErr::CErr("Paramter Format Wrong".to_string()).into());
         }
 
         let block = get_property_value(value, None)?;
@@ -249,15 +253,15 @@ impl Block {
 
         let line_color = get_value_str(block, "color")?;
         let color  = if !line_color.is_empty() {
-            AnnoColor::from_str(&line_color).unwrap()
+            AnnoColor::from_str(&line_color).unwrap_or_default()
         } else {
             AnnoColor::default()
         };
 
         let mut child = Vec::new();
-        if value.get("has_children").unwrap().as_bool().unwrap() {
-            let response = Request::new(Module::Blocks(get_value_str(value, "id")?).path())?.request(super::request::RequestMethod::GET, Json::default())?;
-            for v in response["results"].as_array().unwrap().iter() {
+        if value.get("has_children").ok_or(anyhow!("Paramter Format Wrong"))?.as_bool().ok_or(anyhow!("Paramter Format Wrong"))? {
+            let response = Request::new(Notion::Blocks(get_value_str(value, "id")?).path())?.request(super::request::RequestMethod::GET, Json::default())?;
+            for v in response.get("results").ok_or(anyhow!("Paramter Format Wrong"))?.as_array().ok_or(anyhow!("Paramter Format Wrong"))?.iter() {
                 child.push(Block::new(v)?);
             }
         }
@@ -265,10 +269,10 @@ impl Block {
         let status = {
             use BlockType::*;
             match line_type {
-                Heading1|Heading2|Heading3 => block.get("is_toggleable").unwrap().to_owned(),
-                ToDo => block.get("checked").unwrap().to_owned(),
-                Callout => block.get("icon").unwrap().to_owned(),
-                Code => block.get("language").unwrap().to_owned(),
+                Heading1|Heading2|Heading3 => block.get("is_toggleable").ok_or(anyhow!("Paramter Format Wrong"))?.to_owned(),
+                ToDo => block.get("checked").ok_or(anyhow!("Paramter Format Wrong"))?.to_owned(),
+                Callout => block.get("icon").ok_or(anyhow!("Paramter Format Wrong"))?.to_owned(),
+                Code => block.get("language").ok_or(anyhow!("Paramter Format Wrong"))?.to_owned(),
                 _ => Json::default(),
             }
         };
@@ -293,7 +297,10 @@ impl FmtDisplay for Block {
             if self.status.is_boolean() {
                 if self.status.as_bool().unwrap() { "x" } else { " " }
             } else if self.status.is_object() {
-                get_property_value(&self.status, None).as_str().unwrap()
+                match get_property_value(&self.status, None) {
+                    Ok(s) => s.as_str().unwrap(),
+                    Err(e) => "",
+                }
             } else {
                 self.status.as_str().unwrap()
             }

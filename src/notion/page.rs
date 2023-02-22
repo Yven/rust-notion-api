@@ -1,4 +1,4 @@
-use super::{request::Request, request::RequestMethod, Module, get_property_value, get_value_str, property::Property, block::Block, Json, ImpRequest};
+use super::{request::Request, request::RequestMethod, Notion, get_property_value, get_value_str, property::Property, block::Block, Json, ImpRequest};
 use anyhow::{Result, anyhow};
 
 
@@ -54,7 +54,7 @@ impl Page {
         for (key, value) in property_list.as_object().unwrap().iter() {
             match key.as_str() {
                 "Author" | "Created time" | "Edited time" | "Name" => (),
-                _ => properties.push(Property::new(key, value)),
+                _ => properties.push(Property::new(key, value)?),
             }
         }
 
@@ -78,7 +78,7 @@ impl Page {
 //     }
 
     pub fn content(&mut self) -> Result<String> {
-        let response = Request::new(Module::Blocks(self.id.to_string()).path())?.request(RequestMethod::GET, Json::default())?;
+        let response = Request::new(Notion::Blocks(self.id.to_string()).path())?.request(RequestMethod::GET, Json::default())?;
         for val in response["results"].as_array().unwrap().iter() {
             self.content.push(Block::new(val).unwrap());
         }
@@ -92,8 +92,8 @@ impl Page {
 }
 
 impl ImpRequest for Page {
-    fn search(id: String, body: Json) -> Result<Self> {
-        let page = Request::new(Module::Pages(id).path())?.request(RequestMethod::GET, body)?;
+    fn search(module: &Notion, body: Json) -> Result<Self> {
+        let page = Request::new(module.path())?.request(RequestMethod::GET, body)?;
         Page::new(&page)
     }
 }
