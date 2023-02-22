@@ -10,7 +10,7 @@ pub mod request;
 
 use std::fmt::Display;
 
-use self::{database::Database, sort::Direction};
+use self::sort::Direction;
 
 use super::CONFIG_MAP;
 use filter::Filter;
@@ -21,8 +21,8 @@ pub use serde_json::Value as Json;
 use anyhow::{Result, anyhow};
 
 
-trait ImpRequest {
-    fn search(id: String, val: Json) -> Result<Self>  where Self: Sized;
+pub trait ImpRequest {
+    fn search(module: &Notion, val: Json) -> Result<Self>  where Self: Sized;
     // fn find(&self, val: Json) -> Self;
     // fn save(&self, val: Json) -> Self;
     // fn update(&self, val: Json) -> Self;
@@ -86,7 +86,7 @@ impl NotionBuilder {
         self
     }
 
-    pub fn sort(mut self, order: Vec<(String, Direction)>) -> Self {
+    pub fn sort(&mut self, order: Vec<(String, Direction)>) -> &mut Self {
         self.sort.add(order);
         self
     }
@@ -95,7 +95,7 @@ impl NotionBuilder {
     // }
 
     pub fn search<T: ImpRequest>(&self) -> Result<T> {
-        T::search(self.module.get_val(), self.format_body())
+        T::search(&self.module, self.format_body())
     }
 
     pub fn format_body(&self) -> Json {

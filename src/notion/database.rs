@@ -1,4 +1,4 @@
-use super::{request::Request, request::RequestMethod, page::Page, Module, ImpRequest, Json};
+use super::{request::Request, request::RequestMethod, page::Page, Notion, ImpRequest, Json};
 use anyhow::{Result, anyhow};
 
 #[allow(dead_code)]
@@ -20,8 +20,8 @@ impl Database {
 }
 
 impl ImpRequest for Database {
-    fn search(id: String, body: Json) -> Result<Self> {
-        let res = Request::new(Module::Databases(id).path())?.request(RequestMethod::POST, body)?;
+    fn search(module: &Notion, body: Json) -> Result<Self> {
+        let res = Request::new(module.path())?.request(RequestMethod::POST, body)?;
         Database::new(res.get("results")
             .ok_or(anyhow!("Notion API Response wrong format"))?.as_array()
             .ok_or(anyhow!("Notion API Response wrong format"))?)

@@ -37,9 +37,7 @@ impl Request {
         let path = self.url.to_owned() + &self.path;
         let client = match method {
             RequestMethod::GET => client.get(path),
-            RequestMethod::POST => {
-                client.post(path).json(&body)
-            },
+            RequestMethod::POST => client.post(path).json(&body),
             _ => client.get(path),
         };
 

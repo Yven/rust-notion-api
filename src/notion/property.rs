@@ -5,6 +5,7 @@ use crate::notion::get_property_value;
 use super::{get_value_str, Json};
 use super::filter::Filter;
 use strum_macros::{Display as EnumDisplay, EnumString};
+use anyhow::{Result, anyhow};
 
 
 #[derive(EnumDisplay, EnumString, Debug)]
@@ -88,15 +89,15 @@ pub struct Property {
 }
 
 impl Property {
-    pub fn new(key: &String, value: &Json) -> Self {
-        let data = get_property_value(value, None);
-        let property_type = get_value_str(value, "type");
+    pub fn new(key: &String, value: &Json) -> Result<Self> {
+        let data = get_property_value(value, None)?;
+        let property_type = get_value_str(value, "type")?;
 
         let data = if !data.is_array() {
             vec![data] 
         } else { 
             let mut vm = Vec::new();
-            for v in data.as_array().unwrap() {
+            for v in data.as_array().ok_or(anyhow!("Paramter Format Wrong")).unwrap() {
                 vm.push(v)
             }
             vm
@@ -105,10 +106,10 @@ impl Property {
         let mut property_data_opt = Vec::new();
         for arr_val in data.iter() {
             let arr_val = if !arr_val.is_object() {
-                vec![(get_value_str(value, "type"), *arr_val)]
+                vec![(get_value_str(value, "type")?, *arr_val)]
             } else {
                 let mut vm = Vec::new();
-                for (k, v) in arr_val.as_object().unwrap().iter() {
+                for (k, v) in arr_val.as_object().ok_or(anyhow!("Paramter Format Wrong"))?.iter() {
                     vm.push((k.to_string(), v))
                 }
                 vm
@@ -118,7 +119,7 @@ impl Property {
                 let v = if v.is_null() {
                     String::default()
                 } else {
-                    v.as_str().unwrap().to_string()
+                    v.as_str().unwrap_or_default().to_string()
                 };
                 let mut hm = HashMap::new();
                 hm.insert(k.to_string(), v);
@@ -128,10 +129,10 @@ impl Property {
 
         let property = PropertyType::from_str(&property_type).unwrap().reset_val(key.to_string());
 
-        Property {
+        Ok(Property {
             property,
             data: property_data_opt,
-        }
+        })
     }
 }
 

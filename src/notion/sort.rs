@@ -16,7 +16,7 @@ impl Sort {
         Sort { map: map.into_iter().collect() }
     }
 
-    pub fn add(mut self, map: Vec<(String, Direction)>) -> Self {
+    pub fn add(&mut self, map: Vec<(String, Direction)>) -> &mut Self {
         self.map.extend(map.into_iter().collect::<HashMap<String, Direction>>());
         self
     }
@@ -35,8 +35,7 @@ impl FmtDisplay for Sort {
             output = output + format!(r#"{{"property":"{}","direction":"{}"}}"#, k, v.to_string().to_lowercase()).as_str() + ",";
         }
         output.pop();
-        output = format!(r#"[{}]"#, output);
 
-        write!(f, "{}", output)
+        write!(f, r#"[{}]"#, output)
     }
 }
