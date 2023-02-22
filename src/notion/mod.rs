@@ -8,6 +8,8 @@ pub mod block;
 pub mod request;
 
 
+use std::fmt::Display;
+
 use self::{database::Database, sort::Direction};
 
 use super::CONFIG_MAP;
@@ -29,26 +31,26 @@ trait ImpRequest {
 
 
 #[allow(dead_code)]
-pub enum Module {
+pub enum Notion {
     Databases(String),
     Pages(String),
     Blocks(String),
     Users(String),
 }
 
-impl Module {
+impl Notion {
     pub fn path(&self) -> String {
         match self {
-            Module::Databases(id) => "databases/".to_string() + &id + "/query",
-            Module::Pages(id) => "pages/".to_string() + &id,
-            Module::Blocks(id) => "blocks/".to_string() + &id + "/children",
-            Module::Users(id) => "users/".to_string() + &id,
+            Notion::Databases(id) => "databases/".to_string() + &id + "/query",
+            Notion::Pages(id) => "pages/".to_string() + &id,
+            Notion::Blocks(id) => "blocks/".to_string() + &id + "/children",
+            Notion::Users(id) => "users/".to_string() + &id,
         }
     }
 
-    pub fn get_name(&self) -> String {
+    pub fn get_val(&self) -> String {
         {
-            use Module::*;
+            use Notion::*;
             match self {
                 Databases(s) |
                 Pages(s) |
@@ -58,39 +60,52 @@ impl Module {
         }
     }
 
+    pub fn filter(self, filter: Filter) -> NotionBuilder {
+        NotionBuilder { module: self, filter, sort: Sort::default() }
+    }
+
+    pub fn sort(self, sort: Vec<(String, Direction)>) -> NotionBuilder  {
+        NotionBuilder { module: self, filter: Filter::default(), sort: Sort::new(sort) }
+    }
 }
 
 
-pub struct Notion {
-    pub module: Module,
+pub struct NotionBuilder {
+    pub module: Notion,
     filter: Filter,
     sort: Sort,
 }
 
-impl Notion {
-    pub fn new(module: Module) -> Self {
-        Notion { module, filter: Filter::default(), sort: Sort::default() }
+impl NotionBuilder {
+    pub fn new(module: Notion) -> Self {
+        NotionBuilder { module, filter: Filter::default(), sort: Sort::default() }
     }
 
-    pub fn filter(mut self, condition: Filter) -> Self {
-        self.filter = condition;
+    pub fn filter(mut self, filter: Filter) -> Self {
+        self.filter = self.filter.and(filter);
         self
     }
 
     pub fn sort(mut self, order: Vec<(String, Direction)>) -> Self {
-        self.sort = Sort::new(order);
+        self.sort.add(order);
         self
-    }
-
-    pub fn search(&self) -> Result<Database> {
-        Database::search(self.module.get_name(), self.format_body())
     }
 
     // pub fn find(&self) -> T {
     // }
 
+    pub fn search<T: ImpRequest>(&self) -> Result<T> {
+        T::search(self.module.get_val(), self.format_body())
+    }
+
     pub fn format_body(&self) -> Json {
-        serde_json::from_str::<Json>(&format!(r#"{{"filter": {},"sorts": {}}}"#, self.filter, self.sort)).unwrap()
+        serde_json::from_str::<Json>(&self.to_string()).unwrap()
+    }
+}
+
+impl Display for NotionBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, r#"{{"filter": {},"sorts": {}}}"#, self.filter, self.sort)
     }
 }
 

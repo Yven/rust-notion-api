@@ -15,6 +15,11 @@ impl Sort {
     pub fn new(map: Vec<(String, Direction)>) -> Self {
         Sort { map: map.into_iter().collect() }
     }
+
+    pub fn add(mut self, map: Vec<(String, Direction)>) -> Self {
+        self.map.extend(map.into_iter().collect::<HashMap<String, Direction>>());
+        self
+    }
 }
 
 impl Default for Sort {
