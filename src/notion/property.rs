@@ -38,7 +38,7 @@ impl PropertyType {
         Filter::new(self, ("does_not_contain".to_string(), val.to_string()))
     }
 
-    pub fn get_name(&self) -> String {
+    pub fn get_val(&self) -> String {
         {
             use PropertyType::*;
             match self {

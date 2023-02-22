@@ -1,7 +1,7 @@
 use notion_api::{notion::{Notion, Module, property::PropertyType, sort}, CONFIG_MAP};
 
 fn main() {
-    let database = Notion::new(Module::Databases(CONFIG_MAP.get("db_id").unwrap().to_string()))
+    let database = Notion::Databases(CONFIG_MAP.get("db_id").unwrap().to_string())
         .filter(PropertyType::Status("Status".to_string()).equals("Published").and(PropertyType::People("author".to_string()).contains("Yven")))
         .sort(vec![("Edited Time".to_string(), sort::Direction::Descending)])
         .search();
