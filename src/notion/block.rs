@@ -194,9 +194,8 @@ impl FmtDisplay for RichText {
                 _ => (&anno_format).replace("{}", anno.get_str("md").unwrap()),
             };
         }
-        anno_format.replace("{}", &self.text);
 
-        write!(f, "{}", anno_format)
+        write!(f, "{}", anno_format.replace("{}", &self.text))
     }
 }
 
@@ -248,7 +247,7 @@ impl BlockElement {
             line.push(RichText::new(v)?);
         }
 
-        let line_color = get_value_str(block, "color")?;
+        let line_color = get_value_str(block, "color").unwrap_or_default();
         let color  = if !line_color.is_empty() {
             AnnoColor::from_str(&line_color).unwrap_or_default()
         } else {
@@ -304,7 +303,7 @@ impl FmtDisplay for BlockElement {
         } else if self.status.is_object() {
             match get_property_value(&self.status, None) {
                 Ok(v) => v.as_str().unwrap_or_default(),
-                Err(e) => "",
+                Err(_) => "",
             }
         } else {
             self.status.as_str().unwrap()

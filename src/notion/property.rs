@@ -6,7 +6,7 @@ use super::error::CommErr;
 use super::{get_value_str, Json};
 use super::filter::Filter;
 use strum_macros::{Display as EnumDisplay, EnumString};
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 
 #[derive(EnumDisplay, EnumString, Debug)]

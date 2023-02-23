@@ -7,7 +7,7 @@ pub enum CommErr {
      #[error("Remote request error: 【{0}】")]
     ReqErr(#[from] reqwest::Error),
      #[error("Remote API return error: 【{0}】.")]
-    HttpResErr(String),
+    HttpResErr(&'static str),
      #[error("Serialize error: 【{0}】.")]
     JsonErr(#[from] serde_json::Error),
      #[error("Module default error: 【{0}】.")]

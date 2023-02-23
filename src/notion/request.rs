@@ -50,7 +50,8 @@ impl Request {
         if code.is_success() {
             Ok(res)
         } else {
-            Err(CommErr::HttpResErr("<".to_string() + code.as_str() + ">:" + &get_value_str(&res, "message")?).into())
+            let msg: &'static str = Box::leak(Box::new("<".to_string() + code.as_str() + ">:" + &get_value_str(&res, "message")?));
+            Err(CommErr::HttpResErr(msg).into())
         }
     }
 
