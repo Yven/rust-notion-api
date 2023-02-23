@@ -63,17 +63,17 @@ impl Page {
             created_time: get_value_str(page, "created_time")?,
             edited_time: get_value_str(page, "last_edited_time")?,
             author,
-            editor_id: get_value_str(&page["last_edited_by"], "id")?,
-            cover: get_value_str(page, "cover")?,
-            icon: get_value_str(page, "icon")?,
+            editor_id: get_value_str(&page["last_edited_by"], "id").unwrap_or_default(),
+            cover: get_value_str(page, "cover").unwrap_or_default(),
+            icon: get_value_str(page, "icon").unwrap_or_default(),
             title: get_value_str(
                 get_property_value(property_list, Some("Name"))?
                 .get(0).ok_or(CommErr::FormatErr("properties"))?
             , "plain_text")?,
             archived: page.get("archived")
                 .ok_or(CommErr::FormatErr("archived"))?
-                .as_bool().ok_or(CommErr::FormatErr("archived"))?,
-            url: get_value_str(page, "url")?,
+                .as_bool().unwrap_or_default(),
+            url: get_value_str(page, "url").unwrap_or_default(),
             properties,
             content: Block::default(),
         })
