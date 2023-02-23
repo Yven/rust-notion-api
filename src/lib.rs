@@ -9,12 +9,14 @@ lazy_static! {
         let path = env!("CARGO_MANIFEST_DIR").to_string() + "/secret.json";
         let config = std::fs::read_to_string(path).unwrap();
         let config = serde_json::from_str::<Json>(&config).unwrap();
-        let key: &'static str = Box::leak(Box::new(config["key"].as_str().unwrap().to_string()));
-        let db_id: &'static str = Box::leak(Box::new(config["db_id"].as_str().unwrap().to_string()));
 
         let mut m = HashMap::new();
-        m.insert("key", key);
-        m.insert("db_id", db_id);
+        for (k, v) in config.as_object().unwrap().iter() {
+            let key: &'static str = Box::leak(Box::new(k.to_string()));
+            let val: &'static str = Box::leak(Box::new(v.as_str().unwrap().to_string()));
+            m.insert(key, val);
+        }
+
         m
     };
 }
