@@ -18,7 +18,7 @@ use sort::Sort;
 
 use error::CommErr;
 pub use serde_json::Value as Json;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 
 pub trait ImpRequest {
@@ -113,22 +113,22 @@ impl Display for NotionBuilder {
 /**
  * 获取Notion属性数组中的属性值
  */
-fn get_property_value<'a>(property: &'a Json, index: Option<&str>) -> Result<&'a Json> {
+fn get_property_value<'a>(property: &'a Json, index: Option<&'static str>) -> Result<&'a Json> {
     let property = match index {
-        Some(i) => &property.get(i).ok_or(anyhow!(format!("get_property_value() -> index [{}] do not exist", index.unwrap())))?,
+        Some(i) => &property.get(i).ok_or(CommErr::FormatErr(index.unwrap()))?,
         None => property,
     };
 
-    property.get(get_value_str(property, "type")?).ok_or(anyhow!("get_property_value() -> [type] do not exist"))
+    property.get(get_value_str(property, "type")?).ok_or(CommErr::FormatErr("type").into())
 }
 
 /**
  * 获取Json中的某个值的String形式
  */
-fn get_value_str(value: &Json, index: &str) -> Result<String> {
+fn get_value_str(value: &Json, index: &'static str) -> Result<String> {
     Ok(
-        value.get(index).ok_or(anyhow!(format!("get_value_str() -> Do not exist [{}] in Json Data.", index)))?
-            .as_str().ok_or(anyhow!(format!("get_value_str() -> Not a String Data this property [{}]", index)))?
+        value.get(index).ok_or(CommErr::FormatErr(index))?
+            .as_str().ok_or(CommErr::GetValueStrErr(index))?
             .to_string()
     )
 }

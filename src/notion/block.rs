@@ -1,10 +1,10 @@
 use std::str::FromStr;
 use std::fmt::Display as FmtDisplay;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use strum::EnumProperty;
 use strum_macros::{Display as Enumdisplay, EnumString};
-use super::{request::Request, Notion, CommErr, get_value_str, get_property_value, Json};
+use super::{request::Request, request::RequestMethod, Notion, CommErr, get_value_str, get_property_value, Json, ImpRequest};
 use serde_json::Map;
 
 
@@ -154,7 +154,7 @@ impl RichText {
             }
         };
 
-        let anno = match val.get("annotations").ok_or(anyhow!("RichText Format Wrong"))?.as_object() {
+        let anno = match val.get("annotations").ok_or(CommErr::FormatErr("annotations"))?.as_object() {
             Some(obj) => obj.to_owned(),
             None => Map::new(),
         };
@@ -176,8 +176,10 @@ impl RichText {
 
         Ok(RichText { text, href, annotation })
     }
+}
 
-    fn build_anno(&self) -> String {
+impl FmtDisplay for RichText {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut anno_format = "{}".to_string();
         let mut conflict = false;
         for anno in self.annotation.iter() {
@@ -192,32 +194,28 @@ impl RichText {
                 _ => (&anno_format).replace("{}", anno.get_str("md").unwrap()),
             };
         }
-        anno_format.replace("{}", &self.text)
-    }
-}
+        anno_format.replace("{}", &self.text);
 
-impl FmtDisplay for RichText {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.build_anno())
+        write!(f, "{}", anno_format)
     }
 }
 
 #[derive(Debug)]
-pub struct Block {
+pub struct BlockElement {
     pub line: Vec<RichText>,
     pub line_type: BlockType,
     pub color: AnnoColor,
-    pub child: Vec<Block>,
+    pub child: Vec<BlockElement>,
     pub status: Json,
 }
 
-impl Block {
+impl BlockElement {
     pub fn from_type(line_type: BlockType) -> Self {
-        Block { line: Vec::new(), line_type, color: AnnoColor::Default, child: Vec::new(), status: Json::default() }
+        BlockElement { line: Vec::new(), line_type, color: AnnoColor::Default, child: Vec::new(), status: Json::default() }
     }
 
     pub fn from_text(line_type: BlockType, text: String) -> Self {
-        Block {
+        BlockElement {
             line: vec![ RichText { text, href: String::default(), annotation: Vec::new() } ],
             line_type,
             color: AnnoColor::default(),
@@ -228,7 +226,7 @@ impl Block {
 
     pub fn new(value: &Json) -> Result<Self> {
         if !value.is_object() {
-            return Err(CommErr::CErr("Paramter Format Wrong".to_string()).into());
+            return Err(CommErr::FormatErr("results").into());
         }
 
         let block = get_property_value(value, None)?;
@@ -236,15 +234,14 @@ impl Block {
         let line_type = BlockType::from_str(&get_value_str(value, "type")?)?;
 
         match line_type {
-            BlockType::Divider => return Ok(Block::from_type(line_type)),
-            BlockType::Equation => return Ok(Block::from_text(line_type, get_value_str(block, "expression")?)),
+            BlockType::Divider => return Ok(BlockElement::from_type(line_type)),
+            BlockType::Equation => return Ok(BlockElement::from_text(line_type, get_value_str(block, "expression")?)),
             _ => (),
         }
 
-        let rich_text = match block.get("rich_text") {
-            Some(r) => r.as_array().unwrap(),
-            None => return Err(CommErr::CErr("Unsupport Notion Paragraph Format to Reading for now!".to_string()).into()),
-        };
+        let rich_text = block.get("rich_text")
+            .ok_or(CommErr::UnsupportErr)?
+            .as_array().ok_or(CommErr::FormatErr("rich text"))?;
 
         let mut line: Vec<RichText> = Vec::new();
         for v in rich_text.iter() {
@@ -258,30 +255,37 @@ impl Block {
             AnnoColor::default()
         };
 
+        // TODO: 异步
         let mut child = Vec::new();
-        if value.get("has_children").ok_or(anyhow!("Paramter Format Wrong"))?.as_bool().ok_or(anyhow!("Paramter Format Wrong"))? {
+        if value.get("has_children")
+            .ok_or(CommErr::FormatErr("has_children"))?
+            .as_bool().ok_or(CommErr::FormatErr("has_children"))?
+        {
             let response = Request::new(Notion::Blocks(get_value_str(value, "id")?).path())?.request(super::request::RequestMethod::GET, Json::default())?;
-            for v in response.get("results").ok_or(anyhow!("Paramter Format Wrong"))?.as_array().ok_or(anyhow!("Paramter Format Wrong"))?.iter() {
-                child.push(Block::new(v)?);
+            for v in response.get("results")
+                .ok_or(CommErr::FormatErr("results"))?
+                .as_array().ok_or(CommErr::FormatErr("results"))?.iter()
+            {
+                child.push(BlockElement::new(v)?);
             }
         }
 
         let status = {
             use BlockType::*;
             match line_type {
-                Heading1|Heading2|Heading3 => block.get("is_toggleable").ok_or(anyhow!("Paramter Format Wrong"))?.to_owned(),
-                ToDo => block.get("checked").ok_or(anyhow!("Paramter Format Wrong"))?.to_owned(),
-                Callout => block.get("icon").ok_or(anyhow!("Paramter Format Wrong"))?.to_owned(),
-                Code => block.get("language").ok_or(anyhow!("Paramter Format Wrong"))?.to_owned(),
+                Heading1|Heading2|Heading3 => block.get("is_toggleable").ok_or(CommErr::FormatErr("is_toggleable"))?.to_owned(),
+                ToDo => block.get("checked").ok_or(CommErr::FormatErr("checked"))?.to_owned(),
+                Callout => block.get("icon").ok_or(CommErr::FormatErr("icon"))?.to_owned(),
+                Code => block.get("language").ok_or(CommErr::FormatErr("language"))?.to_owned(),
                 _ => Json::default(),
             }
         };
 
-        Ok(Block { line, line_type, color, child, status })
+        Ok(BlockElement { line, line_type, color, child, status })
     }
 }
 
-impl FmtDisplay for Block {
+impl FmtDisplay for BlockElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut paragraph = String::default();
         if self.line.is_empty() {
@@ -293,18 +297,18 @@ impl FmtDisplay for Block {
         }
 
         let format = self.line_type.get_str("md").unwrap();
-        let status_to_replace = if !self.status.is_null() {
-            if self.status.is_boolean() {
-                if self.status.as_bool().unwrap() { "x" } else { " " }
-            } else if self.status.is_object() {
-                match get_property_value(&self.status, None) {
-                    Ok(s) => s.as_str().unwrap(),
-                    Err(e) => "",
-                }
-            } else {
-                self.status.as_str().unwrap()
+        let status_to_replace = if self.status.is_null() {
+            ""
+        } else if self.status.is_boolean() {
+            if self.status.as_bool().unwrap() { "x" } else { " " }
+        } else if self.status.is_object() {
+            match get_property_value(&self.status, None) {
+                Ok(v) => v.as_str().unwrap_or_default(),
+                Err(e) => "",
             }
-        } else { "" };
+        } else {
+            self.status.as_str().unwrap()
+        };
         paragraph = format.replace("{}", &paragraph).replace("{status}", status_to_replace);
 
         paragraph = match self.line_type {
@@ -337,7 +341,48 @@ impl FmtDisplay for Block {
             },
         };
 
-        println!("{:#?}", paragraph);
         write!(f, "{}", paragraph)
+    }
+}
+
+#[derive(Debug)]
+pub struct Block {
+    pub inner: Vec<BlockElement>
+}
+
+impl Block {
+    pub fn new(val: &Json) -> Result<Self> {
+        let val = val.as_array().ok_or(CommErr::FormatErr("results"))?;
+        let mut inner = Vec::new();
+        for val_arr in val.iter() {
+            inner.push(BlockElement::new(val_arr)?);
+        }
+
+        Ok(Block { inner })
+    }
+}
+
+impl ImpRequest for Block {
+    fn search(module: &Notion, val: Json) -> Result<Self> {
+        let response = Request::new(module.path())?.request(RequestMethod::GET, val)?;
+        let v = response.get("results").ok_or(CommErr::FormatErr("results"))?;
+        Block::new(v)
+    }
+}
+
+impl FmtDisplay for Block {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut output = String::default();
+        for block in self.inner.iter() {
+            output = output.trim_end().to_string() + "\n" + &block.to_string();
+        }
+
+        write!(f, "{}", output.trim())
+    }
+}
+
+impl Default for Block {
+    fn default() -> Self {
+        Block { inner: Vec::new() }
     }
 }

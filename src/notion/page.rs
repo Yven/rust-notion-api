@@ -1,5 +1,5 @@
-use super::{request::Request, request::RequestMethod, Notion, get_property_value, get_value_str, property::Property, block::Block, Json, ImpRequest};
-use anyhow::{Result, anyhow};
+use super::{request::Request, request::RequestMethod, Notion, get_property_value, get_value_str, property::Property, block::Block, Json, ImpRequest, error::CommErr};
+use anyhow::Result;
 
 
 // 作者信息
@@ -41,17 +41,17 @@ pub struct Page {
     pub archived: bool,
     pub url: String,
     pub properties: Vec<Property>,
-    pub content: Vec<Block>
+    pub content: Block,
 }
 
 impl Page {
     pub fn new(page: &Json) -> Result<Self> {
-        let property_list = page.get("properties").expect("Page:::new() -> Unsupport Pages Format!");
+        let property_list = page.get("properties").ok_or(CommErr::FormatErr("properties"))?;
 
         let author = Author::new(property_list)?;
 
         let mut properties: Vec<Property> = Vec::new();
-        for (key, value) in property_list.as_object().unwrap().iter() {
+        for (key, value) in property_list.as_object().ok_or(CommErr::FormatErr("properties"))?.iter() {
             match key.as_str() {
                 "Author" | "Created time" | "Edited time" | "Name" => (),
                 _ => properties.push(Property::new(key, value)?),
@@ -66,11 +66,16 @@ impl Page {
             editor_id: get_value_str(&page["last_edited_by"], "id")?,
             cover: get_value_str(page, "cover")?,
             icon: get_value_str(page, "icon")?,
-            title: get_value_str(get_property_value(property_list, Some("Name"))?.get(0).unwrap(), "plain_text")?,
-            archived: page.get("archived").ok_or(anyhow!(""))?.as_bool().ok_or(anyhow!(""))?,
+            title: get_value_str(
+                get_property_value(property_list, Some("Name"))?
+                .get(0).ok_or(CommErr::FormatErr("properties"))?
+            , "plain_text")?,
+            archived: page.get("archived")
+                .ok_or(CommErr::FormatErr("archived"))?
+                .as_bool().ok_or(CommErr::FormatErr("archived"))?,
             url: get_value_str(page, "url")?,
             properties,
-            content: Vec::new(),
+            content: Block::default(),
         })
     }
 
@@ -79,15 +84,9 @@ impl Page {
 
     pub fn content(&mut self) -> Result<String> {
         let response = Request::new(Notion::Blocks(self.id.to_string()).path())?.request(RequestMethod::GET, Json::default())?;
-        for val in response["results"].as_array().unwrap().iter() {
-            self.content.push(Block::new(val).unwrap());
-        }
+        self.content = Block::new(response.get("results").ok_or(CommErr::FormatErr("results"))?)?;
 
-        let mut content = String::default();
-        for line in self.content.iter() {
-            content = content.trim_end().to_string() + "\n" + &line.to_string();
-        }
-        Ok(content.trim().to_string())
+        Ok(self.content.to_string())
     }
 }
 

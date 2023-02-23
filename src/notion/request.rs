@@ -1,7 +1,7 @@
 use super::{CONFIG_MAP, get_value_str, error::CommErr, Json};
 use std::time::Duration;
 use reqwest::{self, header::{HeaderMap, HeaderValue, CONTENT_TYPE}};
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 
 const REQ_TIME_S: u64 = 10;
@@ -24,12 +24,11 @@ pub struct Request {
 
 impl Request {
     pub fn new(path: String) -> Result<Self> {
-        let req = Request {
-            url: CONFIG_MAP.get("url").ok_or(anyhow!("config <url> do not exist"))?.to_string(),
-            secret_key: CONFIG_MAP.get("key").ok_or(anyhow!("config <key> do not exist"))?.to_string(),
+        Ok(Request {
+            url: CONFIG_MAP.get("url").ok_or(CommErr::ConfigErr("url"))?.to_string(),
+            secret_key: CONFIG_MAP.get("key").ok_or(CommErr::ConfigErr("key"))?.to_string(),
             path,
-        };
-        Ok(req)
+        })
     }
 
     pub fn request(&self, method: RequestMethod, body: Json) -> Result<Json> {
@@ -46,18 +45,18 @@ impl Request {
             .timeout(Duration::new(REQ_TIME_S, REQ_TIME_NS))
             .send()?;
 
-        let is_success = res.status().is_success();
+        let code = res.status();
         let res: Json = serde_json::from_str(res.text()?.as_str())?;
-        if is_success {
+        if code.is_success() {
             Ok(res)
         } else {
-            Err(CommErr::CErr(get_value_str(&res, "message")?).into())
+            Err(CommErr::HttpResErr("<".to_string() + code.as_str() + ">:" + &get_value_str(&res, "message")?).into())
         }
     }
 
     fn get_header(&self) -> HeaderMap {
         let mut header = HeaderMap::new();
-        header.insert("Notion-Version", CONFIG_MAP.get("version").unwrap_or(&"2022-06-28").parse().expect("Config [Notion Version] wrong format"));
+        header.insert("Notion-Version", CONFIG_MAP.get("version").unwrap_or(&"2022-06-28").parse().expect("Config [version] format error"));
         header.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         header
     }
