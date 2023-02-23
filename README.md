@@ -31,18 +31,22 @@ cargo run
 - [x] 分隔筛选和排序
 - [x] 分离筛选模块中的属性模块，方便复用
 - [x] 添加block结构和生成方法
-- [ ] 不同的block|rich_text附带的属性特殊处理
-- [ ] 优化property::new()方法
-- [ ] 优化递归
 - [x] 优化各结构to_string方法
-- [ ] <del>常用函数整理为宏</del>
 - [x] 整理结构和调用关系（调整notion模块的结构）
 - [x] 完成筛选模块中属性的其他匹配方法
+- [x] 统一错误结构
+- [x] markdown格式映射
+- [ ] <del>常用函数整理为宏</del>
+- [x] 不同的block|rich_text附带的属性特殊处理
+- [ ] 优化property::new()方法
+- [ ] 优化递归
 - [ ] 完成请求模块的其他方法
 - [ ] Page/Database结构和方法
 - [ ] 请求分页参数处理
-- [x] 统一错误结构
-- [x] markdown格式映射
+- [ ] 异步请求
+- [ ] 单元测试
+- [ ] doc,rs文档
+- [ ] 容器化
 
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

@@ -2,6 +2,7 @@ use std::{collections::HashMap};
 use std::str::FromStr;
 use crate::notion::get_property_value;
 
+use super::error::CommErr;
 use super::{get_value_str, Json};
 use super::filter::Filter;
 use strum_macros::{Display as EnumDisplay, EnumString};
@@ -97,7 +98,7 @@ impl Property {
             vec![data] 
         } else { 
             let mut vm = Vec::new();
-            for v in data.as_array().ok_or(anyhow!("Paramter Format Wrong")).unwrap() {
+            for v in data.as_array().ok_or(CommErr::FormatErr("property value"))? {
                 vm.push(v)
             }
             vm
@@ -109,7 +110,7 @@ impl Property {
                 vec![(get_value_str(value, "type")?, *arr_val)]
             } else {
                 let mut vm = Vec::new();
-                for (k, v) in arr_val.as_object().ok_or(anyhow!("Paramter Format Wrong"))?.iter() {
+                for (k, v) in arr_val.as_object().ok_or(CommErr::FormatErr("property value"))?.iter() {
                     vm.push((k.to_string(), v))
                 }
                 vm
