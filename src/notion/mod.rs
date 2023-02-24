@@ -8,21 +8,21 @@ pub mod block;
 pub mod request;
 
 
-use std::fmt::Display;
-
-use self::sort::Direction;
+use self::request::Request;
 
 use super::CONFIG_MAP;
+use sort::{Sort, Direction};
 use filter::Filter;
-use sort::Sort;
-
+use property::PropertyType;
 use error::CommErr;
+
+use std::fmt::Display;
 pub use serde_json::Value as Json;
 use anyhow::Result;
 
 
 pub trait ImpRequest {
-    fn search(module: &Notion, val: Json) -> Result<Self>  where Self: Sized;
+    fn search(request: &Request, module: &Notion, val: Json) -> Result<Self>  where Self: Sized;
     // fn find(&self, val: Json) -> Self;
     // fn save(&self, val: Json) -> Self;
     // fn update(&self, val: Json) -> Self;
@@ -61,24 +61,50 @@ impl Notion {
     }
 
     pub fn filter(self, filter: Filter) -> NotionBuilder {
-        NotionBuilder { module: self, filter, sort: Sort::default() }
+        NotionBuilder::from_filter(self, filter)
     }
 
-    pub fn sort(self, sort: Vec<(String, Direction)>) -> NotionBuilder  {
-        NotionBuilder { module: self, filter: Filter::default(), sort: Sort::new(sort) }
+    pub fn sort(self, sort: Vec<(PropertyType, Direction)>) -> NotionBuilder  {
+        NotionBuilder::from_sort(self, sort)
+    }
+
+    pub fn search<T: ImpRequest>(self) -> Result<T> {
+        let builder = NotionBuilder::new(self);
+        T::search(&builder.request, &builder.module, builder.format_body())
     }
 }
 
 
 pub struct NotionBuilder {
     pub module: Notion,
+    request: Request,
     filter: Filter,
     sort: Sort,
 }
 
 impl NotionBuilder {
     pub fn new(module: Notion) -> Self {
-        NotionBuilder { module, filter: Filter::default(), sort: Sort::default() }
+        let request = match Request::new() {
+            Ok(s) => s,
+            Err(e) => panic!("{}", e)
+        };
+        NotionBuilder { module, request, filter: Filter::default(), sort: Sort::default() }
+    }
+
+    pub fn from_filter(module: Notion, filter: Filter) -> Self {
+        let request = match Request::new() {
+            Ok(s) => s,
+            Err(e) => panic!("{}", e)
+        };
+        NotionBuilder { module, request, filter, sort: Sort::default() }
+    }
+
+    pub fn from_sort(module: Notion, sort: Vec<(PropertyType, Direction)>) -> Self {
+        let request = match Request::new() {
+            Ok(s) => s,
+            Err(e) => panic!("{}", e)
+        };
+        NotionBuilder { module, request, filter: Filter::default(), sort: Sort::new(sort) }
     }
 
     pub fn filter(mut self, filter: Filter) -> Self {
@@ -86,8 +112,8 @@ impl NotionBuilder {
         self
     }
 
-    pub fn sort(&mut self, order: Vec<(String, Direction)>) -> &mut Self {
-        self.sort.add(order);
+    pub fn sort(mut self, field: PropertyType, order: Direction) -> Self {
+        self.sort.add(vec![(field, order)]);
         self
     }
 
@@ -95,7 +121,7 @@ impl NotionBuilder {
     // }
 
     pub fn search<T: ImpRequest>(&self) -> Result<T> {
-        T::search(&self.module, self.format_body())
+        T::search(&self.request, &self.module, self.format_body())
     }
 
     pub fn format_body(&self) -> Json {

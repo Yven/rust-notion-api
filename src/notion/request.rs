@@ -19,21 +19,27 @@ pub enum RequestMethod {
 pub struct Request {
     url: String,
     secret_key: String,
-    path: String,
+    header: HeaderMap,
+    last_resposne: Json,
 }
 
 impl Request {
-    pub fn new(path: String) -> Result<Self> {
+    pub fn new() -> Result<Self> {
         Ok(Request {
             url: CONFIG_MAP.get("url").ok_or(CommErr::ConfigErr("url"))?.to_string(),
             secret_key: CONFIG_MAP.get("key").ok_or(CommErr::ConfigErr("key"))?.to_string(),
-            path,
+            header: {
+                let mut header = HeaderMap::new();
+                header.insert("Notion-Version", CONFIG_MAP.get("version").unwrap_or(&"2022-06-28").parse()?);
+                header
+            },
+            last_resposne: Json::default(),
         })
     }
 
-    pub fn request(&self, method: RequestMethod, body: Json) -> Result<Json> {
+    pub fn request(&self, method: RequestMethod, path: String, body: Json) -> Result<Json> {
         let client = reqwest::blocking::Client::new();
-        let path = self.url.to_owned() + &self.path;
+        let path = self.url.to_owned() + &path;
         let client = match method {
             RequestMethod::GET => client.get(path),
             RequestMethod::POST => client.post(path).json(&body),
@@ -41,7 +47,7 @@ impl Request {
         };
 
         let res = client.bearer_auth(&self.secret_key)
-            .headers(self.get_header())
+            .headers(self.get_header(method))
             .timeout(Duration::new(REQ_TIME_S, REQ_TIME_NS))
             .send()?;
 
@@ -55,10 +61,15 @@ impl Request {
         }
     }
 
-    fn get_header(&self) -> HeaderMap {
-        let mut header = HeaderMap::new();
-        header.insert("Notion-Version", CONFIG_MAP.get("version").unwrap_or(&"2022-06-28").parse().expect("Config [version] format error"));
-        header.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+    fn get_header(&self, method: RequestMethod) -> HeaderMap {
+        let mut header = self.header.clone();
+        match method {
+            RequestMethod::POST => {
+                header.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+            },
+            _ => (),
+        }
+
         header
     }
 

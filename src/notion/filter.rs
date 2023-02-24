@@ -64,7 +64,7 @@ impl Filter {
 impl Default for Filter {
     fn default() -> Self {
         Filter {
-            property: PropertyType::Text(String::default()),
+            property: PropertyType::Text(""),
             condition: (String::default(), String::default()),
             logic_operate: String::default(),
             logic_map: Vec::new(),

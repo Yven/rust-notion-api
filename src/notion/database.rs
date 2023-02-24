@@ -20,10 +20,12 @@ impl Database {
 }
 
 impl ImpRequest for Database {
-    fn search(module: &Notion, body: Json) -> Result<Self> {
-        let res = Request::new(module.path())?.request(RequestMethod::POST, body)?;
-        Database::new(res.get("results")
-            .ok_or(CommErr::FormatErr("results"))?.as_array()
-            .ok_or(CommErr::FormatErr("results"))?)
+    fn search(request: &Request, module: &Notion, body: Json) -> Result<Self> {
+        let res = request.request(RequestMethod::POST, module.path(), body)?;
+        Database::new(
+            res.get("results")
+            .ok_or(CommErr::FormatErr("results"))?
+            .as_array().ok_or(CommErr::FormatErr("results"))?
+        )
     }
 }

@@ -9,21 +9,21 @@ use strum_macros::{Display as EnumDisplay, EnumString};
 use anyhow::Result;
 
 
-#[derive(EnumDisplay, EnumString, Debug)]
+#[derive(EnumDisplay, EnumString, Debug, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "snake_case")] 
 pub enum PropertyType {
-    Text(String),
-    Number(String),
-    Checkbox(String),
-    Select(String),
-    MultiSelect(String),
-    Status(String),
-    Date(String),
-    People(String),
-    Files(String),
-    Relation(String),
-    Rollup(String),
-    Formula(String),
+    Text(&'static str),
+    Number(&'static str),
+    Checkbox(&'static str),
+    Select(&'static str),
+    MultiSelect(&'static str),
+    Status(&'static str),
+    Date(&'static str),
+    People(&'static str),
+    Files(&'static str),
+    Relation(&'static str),
+    Rollup(&'static str),
+    Formula(&'static str),
 }
 
 impl PropertyType {
@@ -61,6 +61,7 @@ impl PropertyType {
     }
 
     pub fn reset_val(&self, val: String) -> Self {
+        let val: &'static str = Box::leak(Box::new(val));
         {
             use PropertyType::*;
             match self {

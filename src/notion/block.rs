@@ -260,12 +260,9 @@ impl BlockElement {
             .ok_or(CommErr::FormatErr("has_children"))?
             .as_bool().ok_or(CommErr::FormatErr("has_children"))?
         {
-            let response = Request::new(Notion::Blocks(get_value_str(value, "id")?).path())?.request(super::request::RequestMethod::GET, Json::default())?;
-            for v in response.get("results")
-                .ok_or(CommErr::FormatErr("results"))?
-                .as_array().ok_or(CommErr::FormatErr("results"))?.iter()
-            {
-                child.push(BlockElement::new(v)?);
+            let block = Notion::Blocks(get_value_str(value, "id")?).search::<Block>()?;
+            for be in block.inner.into_iter() {
+                child.push(be);
             }
         }
 
@@ -362,10 +359,9 @@ impl Block {
 }
 
 impl ImpRequest for Block {
-    fn search(module: &Notion, val: Json) -> Result<Self> {
-        let response = Request::new(module.path())?.request(RequestMethod::GET, val)?;
-        let v = response.get("results").ok_or(CommErr::FormatErr("results"))?;
-        Block::new(v)
+    fn search(request: &Request, module: &Notion, val: Json) -> Result<Self> {
+        let response = request.request(RequestMethod::GET, module.path(), val)?;
+        Block::new(response.get("results").ok_or(CommErr::FormatErr("results"))?)
     }
 }
 
