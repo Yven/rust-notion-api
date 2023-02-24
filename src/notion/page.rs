@@ -83,16 +83,16 @@ impl Page {
 //     }
 
     pub fn content(&mut self) -> Result<String> {
-        let response = Request::new(Notion::Blocks(self.id.to_string()).path())?.request(RequestMethod::GET, Json::default())?;
-        self.content = Block::new(response.get("results").ok_or(CommErr::FormatErr("results"))?)?;
+        let block = Notion::Blocks(self.id.to_string()).search::<Block>()?;
+        self.content = block;
 
         Ok(self.content.to_string())
     }
 }
 
 impl ImpRequest for Page {
-    fn search(module: &Notion, body: Json) -> Result<Self> {
-        let page = Request::new(module.path())?.request(RequestMethod::GET, body)?;
+    fn search(request: &Request, module: &Notion, body: Json) -> Result<Self> {
+        let page = request.request(RequestMethod::GET, module.path(), body)?;
         Page::new(&page)
     }
 }
