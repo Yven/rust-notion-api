@@ -1,4 +1,4 @@
-use super::{request::Request, request::RequestMethod, Notion, get_property_value, get_value_str, property::Property, block::Block, Json, ImpRequest, error::CommErr};
+use super::{Notion, get_property_value, get_value_str, property::Property, block::Block, Json, error::CommErr, NewImp};
 use anyhow::Result;
 
 
@@ -44,8 +44,8 @@ pub struct Page {
     pub content: Block,
 }
 
-impl Page {
-    pub fn new(page: &Json) -> Result<Self> {
+impl NewImp for Page {
+    fn new(page: &Json) -> Result<Self> {
         let property_list = page.get("properties").ok_or(CommErr::FormatErr("properties"))?;
 
         let author = Author::new(property_list)?;
@@ -78,21 +78,16 @@ impl Page {
             content: Block::default(),
         })
     }
+}
 
 //     pub fn from_remote(key: String, id: String) -> Self {
 //     }
 
+impl Page {
     pub fn content(&mut self) -> Result<String> {
         let block = Notion::Blocks(self.id.to_string()).search::<Block>()?;
         self.content = block;
 
         Ok(self.content.to_string())
-    }
-}
-
-impl ImpRequest for Page {
-    fn search(request: &Request, module: &Notion, body: Json) -> Result<Self> {
-        let page = request.request(RequestMethod::GET, module.path(), body)?;
-        Page::new(&page)
     }
 }

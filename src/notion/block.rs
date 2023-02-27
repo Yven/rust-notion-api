@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use strum::EnumProperty;
 use strum_macros::{Display as Enumdisplay, EnumString};
-use super::{request::Request, request::RequestMethod, Notion, CommErr, get_value_str, get_property_value, Json, ImpRequest};
+use super::{Notion, CommErr, get_value_str, get_property_value, Json, NewImp};
 use serde_json::Map;
 
 
@@ -346,8 +346,8 @@ pub struct Block {
     pub inner: Vec<BlockElement>
 }
 
-impl Block {
-    pub fn new(val: &Json) -> Result<Self> {
+impl NewImp for Block {
+    fn new(val: &Json) -> Result<Self> {
         let val = val.as_array().ok_or(CommErr::FormatErr("results"))?;
         let mut inner = Vec::new();
         for val_arr in val.iter() {
@@ -355,13 +355,6 @@ impl Block {
         }
 
         Ok(Block { inner })
-    }
-}
-
-impl ImpRequest for Block {
-    fn search(request: &Request, module: &Notion, val: Json) -> Result<Self> {
-        let response = request.request(RequestMethod::GET, module.path(), val)?;
-        Block::new(response.get("results").ok_or(CommErr::FormatErr("results"))?)
     }
 }
 

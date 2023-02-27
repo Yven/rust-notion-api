@@ -8,6 +8,8 @@ pub mod block;
 pub mod request;
 
 
+use crate::notion::request::RequestMethod;
+
 use self::request::Request;
 
 use super::CONFIG_MAP;
@@ -21,12 +23,10 @@ pub use serde_json::Value as Json;
 use anyhow::Result;
 
 
-pub trait ImpRequest {
-    fn search(request: &Request, module: &Notion, val: Json) -> Result<Self>  where Self: Sized;
-    // fn find(&self, val: Json) -> Self;
-    // fn save(&self, val: Json) -> Self;
-    // fn update(&self, val: Json) -> Self;
-    // fn delete(&self, val: Json) -> Self;
+// pub trait ImpRequest {
+pub trait NewImp {
+    fn new(val: &Json) -> Result<Self>  where Self: Sized;
+    // fn search(builder: &NotionBuilder) -> Result<Self>  where Self: Sized;
 }
 
 
@@ -40,11 +40,26 @@ pub enum Notion {
 
 impl Notion {
     pub fn path(&self) -> String {
-        match self {
-            Notion::Databases(id) => "databases/".to_string() + &id + "/query",
-            Notion::Pages(id) => "pages/".to_string() + &id,
-            Notion::Blocks(id) => "blocks/".to_string() + &id + "/children",
-            Notion::Users(id) => "users/".to_string() + &id,
+        {
+            use Notion::*;
+            match self {
+                Databases(id) => "databases/".to_string() + &id + "/query",
+                Pages(id) => "pages/".to_string() + &id,
+                Blocks(id) => "blocks/".to_string() + &id + "/children",
+                Users(id) => "users/".to_string() + &id,
+            }
+        }
+    }
+
+    pub fn method(&self) -> RequestMethod {
+        {
+            use Notion::*;
+            match self {
+                Databases(_) => RequestMethod::POST,
+                Pages(_) => RequestMethod::GET,
+                Blocks(_) => RequestMethod::GET,
+                Users(_) => RequestMethod::GET,
+            }
         }
     }
 
@@ -68,9 +83,13 @@ impl Notion {
         NotionBuilder::from_sort(self, sort)
     }
 
-    pub fn search<T: ImpRequest>(self) -> Result<T> {
+    pub fn search<T: NewImp>(self) -> Result<T> {
         let builder = NotionBuilder::new(self);
-        T::search(&builder.request, &builder.module, builder.format_body())
+        let res = builder.request.request(builder.module.method(), builder.module.path(), builder.format_body())?;
+        T::new(
+            res.get("results")
+            .ok_or(CommErr::FormatErr("results"))?
+        )
     }
 }
 
@@ -120,12 +139,20 @@ impl NotionBuilder {
     // pub fn find(&self) -> T {
     // }
 
-    pub fn search<T: ImpRequest>(&self) -> Result<T> {
-        T::search(&self.request, &self.module, self.format_body())
+    pub fn search<T: NewImp>(&self) -> Result<T> {
+        let res = self.request.request(self.module.method(), self.module.path(), self.format_body())?;
+        T::new(
+            res.get("results")
+            .ok_or(CommErr::FormatErr("results"))?
+        )
     }
 
     pub fn format_body(&self) -> Json {
         serde_json::from_str::<Json>(&self.to_string()).unwrap()
+    }
+
+    pub fn build(&self) -> Result<Json> {
+        self.request.request(self.module.method(), self.module.path(), self.format_body())
     }
 }
 
