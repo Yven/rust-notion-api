@@ -20,7 +20,6 @@ pub struct Request {
     url: String,
     secret_key: String,
     header: HeaderMap,
-    last_resposne: Json,
 }
 
 impl Request {
@@ -33,7 +32,6 @@ impl Request {
                 header.insert("Notion-Version", CONFIG_MAP.get("version").unwrap_or(&"2022-06-28").parse()?);
                 header
             },
-            last_resposne: Json::default(),
         })
     }
 
