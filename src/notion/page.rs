@@ -80,9 +80,6 @@ impl NewImp for Page {
     }
 }
 
-//     pub fn from_remote(key: String, id: String) -> Self {
-//     }
-
 impl Page {
     pub fn content(&mut self) -> Result<String> {
         let block = Notion::Blocks(self.id.to_string()).search::<Block>()?;
