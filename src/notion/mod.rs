@@ -8,10 +8,7 @@ pub mod block;
 pub mod request;
 
 
-use crate::notion::request::RequestMethod;
-
-use self::request::Request;
-
+use self::request::{Request, RequestMethod};
 use super::CONFIG_MAP;
 use sort::{Sort, Direction};
 use filter::Filter;
@@ -23,7 +20,6 @@ pub use serde_json::Value as Json;
 use anyhow::Result;
 
 
-// pub trait ImpRequest {
 pub trait NewImp {
     fn new(val: &Json) -> Result<Self>  where Self: Sized;
     // fn search(builder: &NotionBuilder) -> Result<Self>  where Self: Sized;
@@ -85,7 +81,7 @@ impl Notion {
 
     pub fn search<T: NewImp>(self) -> Result<T> {
         let builder = NotionBuilder::new(self);
-        let res = builder.request.request(builder.module.method(), builder.module.path(), builder.format_body())?;
+        let res = builder.request.query(builder.module.method(), builder.module.path(), builder.format_body())?;
         T::new(
             res.get("results")
             .ok_or(CommErr::FormatErr("results"))?
@@ -140,7 +136,7 @@ impl NotionBuilder {
     // }
 
     pub fn search<T: NewImp>(&self) -> Result<T> {
-        let res = self.request.request(self.module.method(), self.module.path(), self.format_body())?;
+        let res = self.request.query(self.module.method(), self.module.path(), self.format_body())?;
         T::new(
             res.get("results")
             .ok_or(CommErr::FormatErr("results"))?
@@ -149,10 +145,6 @@ impl NotionBuilder {
 
     pub fn format_body(&self) -> Json {
         serde_json::from_str::<Json>(&self.to_string()).unwrap()
-    }
-
-    pub fn build(&self) -> Result<Json> {
-        self.request.request(self.module.method(), self.module.path(), self.format_body())
     }
 }
 

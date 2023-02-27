@@ -35,13 +35,14 @@ impl Request {
         })
     }
 
-    pub fn request(&self, method: RequestMethod, path: String, body: Json) -> Result<Json> {
+    pub fn query(&self, method: RequestMethod, path: String, body: Json) -> Result<Json> {
         let client = reqwest::blocking::Client::new();
         let path = self.url.to_owned() + &path;
         let client = match method {
             RequestMethod::GET => client.get(path),
             RequestMethod::POST => client.post(path).json(&body),
-            _ => client.get(path),
+            RequestMethod::PATCH => client.patch(path),
+            RequestMethod::DELETE => client.delete(path),
         };
 
         let res = client.bearer_auth(&self.secret_key)
@@ -70,18 +71,5 @@ impl Request {
 
         header
     }
-
-    // pub fn get(&self) -> Result<Json, CommErr> {
-    //     self.request(RequestMethod::GET, Json::default())
-    // }
-
-    // fn save(&self, module: NotionModule) {
-    // }
-
-    // fn update(&self, module: NotionModule) {
-    // }
-
-    // fn delete(&self, module: NotionModule) {
-    // }
 }
 
