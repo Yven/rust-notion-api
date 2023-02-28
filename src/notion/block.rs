@@ -90,12 +90,7 @@ impl BlockElement {
     }
 
     pub fn new(value: &Json) -> Result<Self> {
-        if !value.is_object() {
-            return Err(CommErr::FormatErr("results").into());
-        }
-
         let block = get_property_value(value, None)?;
-
         let line_type = BlockType::from_str(&get_value_str(value, "type")?)?;
 
         match line_type {
@@ -174,11 +169,12 @@ impl FmtDisplay for BlockElement {
 
         };
 
-        let mut child_paragraph = String::default();
         if !self.child.is_empty() {
+            let mut child_paragraph = String::default();
             for child in self.child.iter() {
-                child_paragraph = if child_paragraph.is_empty() { child_paragraph } else { child_paragraph + "\n"} + &child.to_string();
+                child_paragraph = child_paragraph + &child.to_string();
             }
+            child_paragraph = child_paragraph.trim_start().to_string();
 
             paragraph = match self.line_type {
                 BlockType::Toggle => paragraph.replace("{child}", &child_paragraph),
