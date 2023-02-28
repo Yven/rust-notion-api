@@ -1,12 +1,35 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 use std::str::FromStr;
 use crate::notion::get_property_value;
 
-use super::error::CommErr;
-use super::{get_value_str, Json};
-use super::filter::Filter;
+use super::{filter::Filter, error::CommErr, get_value_str, Json};
+use serde_json::Map;
 use strum_macros::{Display as EnumDisplay, EnumString};
 use anyhow::Result;
+
+
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct Author {
+    id: String,
+    name: String,
+    avatar_url: String,
+    email: String,
+    user_type: String
+}
+
+impl Author {
+    pub fn new(property_list: &Json) -> Result<Self> {
+        let author = get_property_value(property_list, Some("Author"))?;
+        Ok(Author {
+            id: get_value_str(author, "id")?,
+            name: get_value_str(author, "name")?,
+            avatar_url: get_value_str(author, "avatar_url")?,
+            email: get_value_str(&author["person"], "email")?,
+            user_type: get_value_str(author, "type")?,
+        })
+    }
+}
 
 
 #[derive(EnumDisplay, EnumString, Debug, PartialEq, Eq, Hash)]
@@ -93,43 +116,32 @@ pub struct Property {
 impl Property {
     pub fn new(key: &String, value: &Json) -> Result<Self> {
         let data = get_property_value(value, None)?;
-        let property_type = get_value_str(value, "type")?;
+        let type_name = get_value_str(value, "type")?;
 
         let data = if !data.is_array() {
-            vec![data] 
+            vec![data.to_owned()] 
         } else { 
-            let mut vm = Vec::new();
-            for v in data.as_array().ok_or(CommErr::FormatErr("property value"))? {
-                vm.push(v)
-            }
-            vm
+            data.as_array().ok_or(CommErr::FormatErr("property value"))?.to_owned()
         };
 
         let mut property_data_opt = Vec::new();
-        for arr_val in data.iter() {
-            let arr_val = if !arr_val.is_object() {
-                vec![(get_value_str(value, "type")?, *arr_val)]
+        for arr_val in data.into_iter() {
+            let property_map = if !arr_val.is_object() {
+                let mut mp = Map::new();
+                mp.insert(type_name.clone(), arr_val).ok_or(CommErr::FormatErr("property value"))?;
+                mp
             } else {
-                let mut vm = Vec::new();
-                for (k, v) in arr_val.as_object().ok_or(CommErr::FormatErr("property value"))?.iter() {
-                    vm.push((k.to_string(), v))
-                }
-                vm
+                arr_val.as_object().ok_or(CommErr::FormatErr("property value"))?.to_owned()
             };
 
-            for (k, v) in arr_val.iter() {
-                let v = if v.is_null() {
-                    String::default()
-                } else {
-                    v.as_str().unwrap_or_default().to_string()
-                };
+            for (k, v) in property_map.iter() {
                 let mut hm = HashMap::new();
-                hm.insert(k.to_string(), v);
+                hm.insert(k.to_string(), v.as_str().unwrap_or_default().to_string());
                 property_data_opt.push(hm);
             }
         }
 
-        let property = PropertyType::from_str(&property_type).unwrap().reset_val(key.to_string());
+        let property = PropertyType::from_str(&type_name).unwrap().reset_val(key.to_string());
 
         Ok(Property {
             property,

@@ -1,167 +1,27 @@
 use std::str::FromStr;
 use std::fmt::Display as FmtDisplay;
 use anyhow::Result;
-
 use strum::EnumProperty;
-use strum_macros::{Display as Enumdisplay, EnumString};
-use super::{Notion, CommErr, get_value_str, get_property_value, Json, NewImp};
 use serde_json::Map;
 
+use super::{Notion, CommErr, get_value_str, get_property_value, Json, NewImp, text::*};
 
-#[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
-#[strum(serialize_all = "snake_case")] 
-pub enum BlockType {
-    // rich text
-    #[strum(props(md="{}"))]
-    Paragraph,
-    #[strum(serialize="heading_1")]
-    #[strum(props(md="# {}"))]
-    Heading1,
-    #[strum(serialize="heading_2")]
-    #[strum(props(md="## {}"))]
-    Heading2,
-    #[strum(serialize="heading_3")]
-    #[strum(props(md="### {}", cmd="false"))]
-    Heading3,
-    #[strum(props(md="* {}"))]
-    BulletedListItem,
-    #[strum(props(md="1. {}"))]
-    NumberedListItem,
-    #[strum(props(md="- [{status}] {}", cmd="false"))]
-    ToDo,
-    #[strum(props(md="<details><summary>{}</summary>{child}</details>", cmd="false"))]
-    Toggle,
-    #[strum(props(md="<aside>{status}{}</aside>", cmd="false"))]
-    Callout,
-    #[strum(props(md="> {}"))]
-    Quote,
-    #[strum(props(md="```{status}\n{}\n```"))]
-    Code,
-    // special
-    #[strum(props(md="---"))]
-    Divider,
-    #[strum(props(md="$${}$$"))]
-    Equation,
-    Template,
-    ChildPage,
-    ChildDatabase,
-    Embed,
-    Image,
-    Video,
-    File,
-    Pdf,
-    Bookmark,
-    TableOfContents,
-    Column,
-    ColumnList,
-    LinkPreview,
-    SyncedBlock,
-    LinkToPage,
-    Table,
-    TableRow,
-    Unsupported,
-}
-
-#[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
-#[strum(serialize_all = "snake_case")] 
-pub enum Annotation {
-    #[strum(props(md="**{}**", mdrpl="__{}__"))]
-    Bold,
-    #[strum(props(md="*{}*", mdrpl="_{}_"))]
-    Italic,
-    #[strum(props(md="<del>{}</del>", cmd="false"))]
-    Strikethrough,
-    #[strum(props(md="<u>{}</u>", cmd="false"))]
-    Underline,
-    #[strum(props(md="`{}`"))]
-    Code,
-    #[strum(props(md="<font {color}>{}</font>"))]
-    Color(AnnoColor),
-}
-
-impl Annotation {
-    pub fn reset_val(self, val: &str) -> Self {
-        {
-            use Annotation::*;
-            match self {
-                Color(_) => Color(AnnoColor::from_str(val).unwrap()),
-                _ => self,
-            }
-        }
-    }
-}
-
-
-#[derive(Enumdisplay, EnumString, EnumProperty, Default, Debug)]
-#[strum(serialize_all = "snake_case")] 
-pub enum AnnoColor {
-    #[default] Default,
-    #[strum(props(md="color=blue"))]
-    Blue,
-    #[strum(props(md="style=background:blue"))]
-    BlueBackground,
-    #[strum(props(md="color=brown"))]
-    Brown,
-    #[strum(props(md="style=background:brown"))]
-    BrownBackground,
-    #[strum(props(md="color=gray"))]
-    Gray,
-    #[strum(props(md="style=background:gray"))]
-    GrayBackground,
-    #[strum(props(md="color=green"))]
-    Green,
-    #[strum(props(md="style=background:green"))]
-    GreenBackground,
-    #[strum(props(md="color=orange"))]
-    Orange,
-    #[strum(props(md="style=background:orange"))]
-    OrangeBackground,
-    #[strum(props(md="color=pink"))]
-    Pink,
-    #[strum(props(md="style=background:pink"))]
-    PinkBackground,
-    #[strum(props(md="color=purple"))]
-    Purple,
-    #[strum(props(md="style=background:purple"))]
-    PurpleBackground,
-    #[strum(props(md="color=red"))]
-    Red,
-    #[strum(props(md="style=background:red"))]
-    RedBackground,
-    #[strum(props(md="color=yellow"))]
-    Yellow,
-    #[strum(props(md="style=background:yellow"))]
-    YellowBackground,
-}
 
 #[derive(Debug)]
-pub struct RichText {
+pub struct FragmentText {
     pub text: String,
     pub href: String,
     pub annotation: Vec<Annotation>,
 }
-impl RichText {
-    pub fn new(val: &Json) -> Result<Self> {
-        let text = get_value_str(val, "plain_text")?;
-        let href = match val.get("href") {
-            None => String::default(),
-            Some(href) => {
-                if href.is_null() {
-                    String::default()
-                } else {
-                    href.as_str().unwrap_or_default().to_string()
-                }
-            }
-        };
 
-        let anno = match val.get("annotations").ok_or(CommErr::FormatErr("annotations"))?.as_object() {
-            Some(obj) => obj.to_owned(),
-            None => Map::new(),
-        };
+impl FragmentText {
+    pub fn new(val: &Json) -> Result<Self> {
         let mut annotation: Vec<Annotation> = Vec::new();
+        let default_map = Map::new();
+        let anno = val.get("annotations").ok_or(CommErr::FormatErr("annotations"))?.as_object().unwrap_or(&default_map);
         for (anno_key, anno_val) in anno.iter() {
             if anno_key == "color" {
-                annotation.push(Annotation::from_str(anno_key)?.reset_val(anno_val.as_str().unwrap()));
+                annotation.push(Annotation::from_str(anno_key).unwrap().reset_val(anno_val.as_str().unwrap()));
                 continue;
             } 
             match anno_val.as_bool() {
@@ -174,11 +34,16 @@ impl RichText {
             }
         }
 
-        Ok(RichText { text, href, annotation })
+        Annotation::sort(&mut annotation);
+        Ok(FragmentText  {
+            text: get_value_str(val, "plain_text")?,
+            href: val.get("href").unwrap_or(&Json::default()).as_str().unwrap_or_default().to_string(),
+            annotation
+        })
     }
 }
 
-impl FmtDisplay for RichText {
+impl FmtDisplay for FragmentText  {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut anno_format = "{}".to_string();
         let mut conflict = false;
@@ -187,7 +52,7 @@ impl FmtDisplay for RichText {
                 Annotation::Color(AnnoColor::Default) => anno_format,
                 Annotation::Color(c) => (&anno_format).replace("{}", anno.get_str("md").unwrap()).replace("{color}", c.get_str("md").unwrap()),
                 Annotation::Bold|Annotation::Italic => {
-                    let anno_prop = if !conflict { conflict = true; "md" } else { "mdrpl" };
+                    let anno_prop = if !conflict { conflict = true; "md" } else { conflict=false;"mdrpl" };
                     (&anno_format).replace("{}", anno.get_str(anno_prop).unwrap())
                 },
                 Annotation::Code => anno.get_str("md").unwrap().to_string(),
@@ -199,9 +64,10 @@ impl FmtDisplay for RichText {
     }
 }
 
+
 #[derive(Debug)]
 pub struct BlockElement {
-    pub line: Vec<RichText>,
+    pub line: Vec<FragmentText>,
     pub line_type: BlockType,
     pub color: AnnoColor,
     pub child: Vec<BlockElement>,
@@ -209,13 +75,13 @@ pub struct BlockElement {
 }
 
 impl BlockElement {
-    pub fn from_type(line_type: BlockType) -> Self {
+    fn from_type(line_type: BlockType) -> Self {
         BlockElement { line: Vec::new(), line_type, color: AnnoColor::Default, child: Vec::new(), status: Json::default() }
     }
 
-    pub fn from_text(line_type: BlockType, text: String) -> Self {
+    fn from_text(line_type: BlockType, text: String) -> Self {
         BlockElement {
-            line: vec![ RichText { text, href: String::default(), annotation: Vec::new() } ],
+            line: vec![ FragmentText { text, href: String::default(), annotation: Vec::new() } ],
             line_type,
             color: AnnoColor::default(),
             child: Vec::new(),
@@ -242,17 +108,12 @@ impl BlockElement {
             .ok_or(CommErr::UnsupportErr)?
             .as_array().ok_or(CommErr::FormatErr("rich text"))?;
 
-        let mut line: Vec<RichText> = Vec::new();
+        let mut line: Vec<FragmentText> = Vec::new();
         for v in rich_text.iter() {
-            line.push(RichText::new(v)?);
+            line.push(FragmentText::new(v)?);
         }
 
-        let line_color = get_value_str(block, "color").unwrap_or_default();
-        let color  = if !line_color.is_empty() {
-            AnnoColor::from_str(&line_color).unwrap_or_default()
-        } else {
-            AnnoColor::default()
-        };
+        let color  = AnnoColor::from_str(&get_value_str(block, "color").unwrap_or_default()).unwrap_or_default();
 
         // TODO: 异步
         let mut child = Vec::new();
@@ -285,23 +146,21 @@ impl FmtDisplay for BlockElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut paragraph = String::default();
         if self.line.is_empty() {
-            paragraph = "<br/>".to_string();
+            return write!(f, "<br/>");
         } else {
             for text in self.line.iter() {
                 paragraph += &text.to_string();
             }
         }
 
+        let empty_val = Json::default();
         let format = self.line_type.get_str("md").unwrap();
         let status_to_replace = if self.status.is_null() {
             ""
         } else if self.status.is_boolean() {
             if self.status.as_bool().unwrap() { "x" } else { " " }
         } else if self.status.is_object() {
-            match get_property_value(&self.status, None) {
-                Ok(v) => v.as_str().unwrap_or_default(),
-                Err(_) => "",
-            }
+            get_property_value(&self.status, None).unwrap_or(&empty_val).as_str().unwrap_or_default()
         } else {
             self.status.as_str().unwrap()
         };
@@ -340,6 +199,7 @@ impl FmtDisplay for BlockElement {
         write!(f, "{}", paragraph)
     }
 }
+
 
 #[derive(Debug)]
 pub struct Block {
