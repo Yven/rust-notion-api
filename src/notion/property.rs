@@ -128,7 +128,7 @@ impl Property {
         for arr_val in data.into_iter() {
             let property_map = if !arr_val.is_object() {
                 let mut mp = Map::new();
-                mp.insert(type_name.clone(), arr_val).ok_or(CommErr::FormatErr("property value"))?;
+                mp.insert(type_name.clone(), arr_val);
                 mp
             } else {
                 arr_val.as_object().ok_or(CommErr::FormatErr("property value"))?.to_owned()
