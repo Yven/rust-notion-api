@@ -6,6 +6,7 @@ pub mod filter;
 pub mod property;
 pub mod block;
 pub mod request;
+pub mod text;
 
 
 use self::request::{Request, RequestMethod};

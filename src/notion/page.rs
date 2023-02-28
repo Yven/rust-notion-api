@@ -1,30 +1,5 @@
-use super::{Notion, get_property_value, get_value_str, property::Property, block::Block, Json, error::CommErr, NewImp};
+use super::{Notion, get_property_value, get_value_str, property::Property, property::Author, block::Block, Json, error::CommErr, NewImp};
 use anyhow::Result;
-
-
-// 作者信息
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct Author {
-    id: String,
-    name: String,
-    avatar_url: String,
-    email: String,
-    user_type: String
-}
-
-impl Author {
-    pub fn new(property_list: &Json) -> Result<Self> {
-        let author = get_property_value(property_list, Some("Author"))?;
-        Ok(Author {
-            id: get_value_str(author, "id")?,
-            name: get_value_str(author, "name")?,
-            avatar_url: get_value_str(author, "avatar_url")?,
-            email: get_value_str(&author["person"], "email")?,
-            user_type: get_value_str(author, "type")?,
-        })
-    }
-}
 
 
 // 页结构

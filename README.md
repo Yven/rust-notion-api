@@ -49,6 +49,8 @@ cargo run
 - [ ] 单元测试
 - [ ] doc,rs文档
 - [ ] 容器化
+- [ ] md外链语法
+- [ ] md标准输出模式
 
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
