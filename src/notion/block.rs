@@ -141,7 +141,7 @@ impl FmtDisplay for BlockElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut paragraph = String::default();
         if self.line.is_empty() {
-            return write!(f, "<br/>");
+            return write!(f, "\n<br/>");
         } else {
             for text in self.line.iter() {
                 paragraph += &text.to_string();
