@@ -1,12 +1,16 @@
-use notion_api::{notion::{Notion, property::PropertyType, sort::Direction, database::Database}, CONFIG_MAP};
+use notion_api::{notion::{Notion, property::PropertyType, sort::Direction, database::Database}};
 use anyhow::{Result, Ok};
+use dotenv::dotenv;
+use std::env;
 
 fn main() -> Result<()> {
+    dotenv().ok();
+
     let s1 = PropertyType::Status("Status").equals("archive");
     let s2 = PropertyType::MultiSelect("Tag").contains("test");
     let filter = s1.and(s2);
 
-    let mut database = Notion::Databases(CONFIG_MAP.get("db_id").unwrap().to_string())
+    let mut database = Notion::Databases(env::var("DB_ID")?.to_string())
         .filter(filter)
         .sort(PropertyType::Date("Edited time"), Direction::Descending)
         .search::<Database>()?;

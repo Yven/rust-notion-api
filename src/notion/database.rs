@@ -1,4 +1,4 @@
-use super::{page::Page, Json, error::CommErr, NewImp};
+use super::{page::Page, Json, CommErr, NewImp};
 use anyhow::Result;
 
 #[allow(dead_code)]
