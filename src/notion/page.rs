@@ -62,4 +62,29 @@ impl Page {
 
         Ok(self.content.to_string())
     }
+
+    pub fn search_property(&self, key: &str) -> Result<Vec<(String, String)>> {
+        let mut res = Vec::new();
+        for p in self.properties.iter() {
+            if p.property.get_val() == key {
+                use super::property::PropertyType::*;
+                let data_key = match p.property {
+                    MultiSelect(_) => "name",
+                    Date(_) => "date",
+                    Text(_) => "plain_text",
+                    _ => "name",
+                };
+                let msg: &'static str = Box::leak(Box::new("MultiSelect".to_string() + key));
+                for p_item in p.data.iter() {
+                    res.push((
+                        p_item.get(data_key).ok_or(CommErr::FormatErr(msg))?.to_string(),
+                        p_item.get("id").unwrap_or(&String::default()).to_string(),
+                    ));
+                }
+                break;
+            }
+        }
+
+        Ok(res)
+    }
 }
