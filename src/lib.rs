@@ -1,6 +1,6 @@
 pub mod notion;
 pub mod error;
-pub mod db_contents;
+pub mod entity;
 use std::env;
 
 

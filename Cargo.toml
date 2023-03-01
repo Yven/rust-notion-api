@@ -17,7 +17,9 @@ strum = { version = "0.24", features = ["derive"] }
 thiserror = "1.0"
 anyhow = "1.0"
 
-tokio = { version = "1.25.0", features = ["full"] }
-sea-orm = { version = "0.11", features = [ "sqlx-mysql", "runtime-tokio-native-tls", "macros" ] }
+async-std = { version = "1.9", features = [ "attributes", "tokio1" ] }
+sea-orm = { version = "0.11", features = [ "sqlx-mysql", "runtime-async-std-native-tls", "macros" ] }
+
+chrono = "0.4.23"
 
 dotenv = "0.15.0"

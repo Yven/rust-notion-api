@@ -7,8 +7,8 @@ pub struct Model {
     pub cid: i32,
     pub title: String,
     pub slug: String,
-    pub created: i32,
-    pub modified: i32,
+    pub created: i64,
+    pub modified: i64,
     pub text: String,
     pub order: i32,
     #[sea_orm(column_name = "authorId")]

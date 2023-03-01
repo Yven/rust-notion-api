@@ -18,6 +18,12 @@ pub enum CommErr {
     GetValueStrErr(&'static str),
      #[error("[Config setting [{0}] do not exist")]
     ConfigErr(#[from] std::env::VarError),
+     #[error("Time string trans to int error: 【{0}】")]
+    TimeTransErr(#[from] chrono::ParseError),
+     #[error("Database run query error: 【{0}】")]
+    DbErr(#[from] sea_orm::DbErr),
+     #[error("This is the Default error return: 【{0}】")]
+    DefaultErr(#[from] anyhow::Error),
      #[error("Unsupport Notion Paragraph Format to Reading for now!")]
     UnsupportErr,
 }

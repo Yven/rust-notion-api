@@ -1,27 +1,15 @@
 use futures::executor::block_on;
 use notion_api::notion::{Notion, property::PropertyType, sort::Direction, database::Database};
+use notion_api::db_connection;
 use anyhow::{Result, Ok};
 use dotenv::dotenv;
 use std::env;
-use notion_api::{db_connection, db_contents};
-use sea_orm::{Set, entity::EntityTrait};
+
 
 fn main() -> Result<()> {
     dotenv().ok();
 
-    let db = block_on(db_connection())?;
-
-    let articles = db_contents::ActiveModel {
-        title: Set("test".to_owned()),
-        ..Default::default()
-    };
-
-    // let res: InsertResult = Fruit::insert_many([apple, orange]).exec(db).await?;
-    let res = block_on(async {
-        db_contents::Entity::insert_many([articles]).exec(&db).await
-    })?;
-
-    println!("{:#?}", res);
+    let _db = block_on(db_connection())?;
 
     let s1 = PropertyType::Status("Status").equals("archive");
     let s2 = PropertyType::MultiSelect("Tag").contains("test");
