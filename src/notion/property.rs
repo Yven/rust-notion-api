@@ -35,6 +35,7 @@ impl Author {
 #[derive(EnumDisplay, EnumString, Debug, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "snake_case")] 
 pub enum PropertyType {
+    #[strum(serialize="rich_text")]
     Text(&'static str),
     Number(&'static str),
     Checkbox(&'static str),
@@ -109,8 +110,8 @@ impl PropertyType {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct Property {
-    property: PropertyType,
-    data: Vec<HashMap<String, String>>,
+    pub property: PropertyType,
+    pub data: Vec<HashMap<String, String>>,
 }
 
 impl Property {
@@ -134,11 +135,11 @@ impl Property {
                 arr_val.as_object().ok_or(CommErr::FormatErr("property value"))?.to_owned()
             };
 
+            let mut hm = HashMap::new();
             for (k, v) in property_map.iter() {
-                let mut hm = HashMap::new();
                 hm.insert(k.to_string(), v.as_str().unwrap_or_default().to_string());
-                property_data_opt.push(hm);
             }
+            property_data_opt.push(hm);
         }
 
         let property = PropertyType::from_str(&type_name).unwrap().reset_val(key.to_string());
