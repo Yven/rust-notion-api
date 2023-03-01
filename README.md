@@ -38,7 +38,7 @@ cargo run
 - [x] markdown格式映射
 - [ ] <del>常用函数整理为宏</del>
 - [x] 不同的block|rich_text附带的属性特殊处理
-- [ ] 优化property::new()方法
+- [x] 优化property::new()方法
 - [ ] 优化递归
 - [ ] 完成请求模块的其他方法
 - [x] 静态request模块（或可复用）
