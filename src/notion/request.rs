@@ -1,7 +1,8 @@
-use super::{CONFIG_MAP, get_value_str, error::CommErr, Json};
+use super::{get_value_str, Json, CommErr};
 use std::time::Duration;
 use reqwest::{self, header::{HeaderMap, HeaderValue, CONTENT_TYPE}};
 use anyhow::Result;
+use std::env;
 
 
 const REQ_TIME_S: u64 = 10;
@@ -25,11 +26,11 @@ pub struct Request {
 impl Request {
     pub fn new() -> Result<Self> {
         Ok(Request {
-            url: CONFIG_MAP.get("url").ok_or(CommErr::ConfigErr("url"))?.to_string(),
-            secret_key: CONFIG_MAP.get("key").ok_or(CommErr::ConfigErr("key"))?.to_string(),
+            url: env::var("URL")?,
+            secret_key: env::var("KEY")?,
             header: {
                 let mut header = HeaderMap::new();
-                header.insert("Notion-Version", CONFIG_MAP.get("version").unwrap_or(&"2022-06-28").parse()?);
+                header.insert("Notion-Version", env::var("VERSION").unwrap_or("2022-06-28".to_string()).parse()?);
                 header
             },
         })

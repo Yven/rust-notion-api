@@ -17,7 +17,7 @@ pub enum CommErr {
      #[error("[{0}] is Not a string data in the Notion property.")]
     GetValueStrErr(&'static str),
      #[error("[Config setting [{0}] do not exist")]
-    ConfigErr(&'static str),
+    ConfigErr(#[from] std::env::VarError),
      #[error("Unsupport Notion Paragraph Format to Reading for now!")]
     UnsupportErr,
 }

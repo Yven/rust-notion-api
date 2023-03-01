@@ -1,3 +1,3 @@
 /target
 /template
-secret.json
+.env
