@@ -10,7 +10,7 @@ fn main() -> Result<()> {
     let s2 = PropertyType::MultiSelect("Tag").contains("test");
     let filter = s1.and(s2);
 
-    let mut database = Notion::Databases(env::var("DB_ID")?.to_string())
+    let mut database = Notion::Databases(env::var("DB_ID")?)
         .filter(filter)
         .sort(PropertyType::Date("Edited time"), Direction::Descending)
         .search::<Database>()?;
