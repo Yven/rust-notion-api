@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use crate::notion::get_property_value;
 
-use super::{filter::Filter, error::CommErr, get_value_str, Json};
+use super::{filter::Filter, CommErr, get_value_str, Json};
 use serde_json::Map;
 use strum_macros::{Display as EnumDisplay, EnumString};
 use anyhow::Result;

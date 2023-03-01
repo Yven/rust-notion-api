@@ -1,6 +1,5 @@
 pub mod page;
 pub mod database;
-pub mod error;
 pub mod sort;
 pub mod filter;
 pub mod property;
@@ -10,11 +9,10 @@ pub mod text;
 
 
 use self::request::{Request, RequestMethod};
-use super::CONFIG_MAP;
 use sort::{Sort, Direction};
 use filter::Filter;
 use property::PropertyType;
-use error::CommErr;
+pub use super::error::CommErr;
 
 use std::fmt::Display;
 pub use serde_json::Value as Json;

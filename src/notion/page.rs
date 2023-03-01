@@ -1,4 +1,4 @@
-use super::{Notion, get_property_value, get_value_str, property::Property, property::Author, block::Block, Json, error::CommErr, NewImp};
+use super::{Notion, get_property_value, get_value_str, property::Property, property::Author, block::Block, Json, CommErr, NewImp};
 use anyhow::Result;
 
 
