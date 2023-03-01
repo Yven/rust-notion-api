@@ -1,4 +1,4 @@
-use notion_api::{notion::{Notion, property::PropertyType, sort::Direction, database::Database}};
+use notion_api::notion::{Notion, property::PropertyType, sort::Direction, database::Database};
 use anyhow::{Result, Ok};
 use dotenv::dotenv;
 use std::env;
