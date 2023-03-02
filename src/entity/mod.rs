@@ -42,15 +42,27 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page, page_content
                         model.count = Set(count + 1);
                         model.update(txn).await?;
                     },
-                    None => noexist_tag_list.push(tag),
+                    None => noexist_tag_list.push((tag.0.as_str(), tag.1.as_str(), "tag")),
                 }
+            }
+
+            let category = page.search_property("Category")?;
+            let metas_model = metas::Entity::find().filter(metas::Column::Name.eq(category[0].0.clone())).one(txn).await?;
+            match metas_model {
+                Some(model) => {
+                    let count = model.count;
+                    let mut model: metas::ActiveModel = model.into();
+                    model.count = Set(count + 1);
+                    model.update(txn).await?;
+                },
+                None => noexist_tag_list.push((category[0].0.as_str(), category[0].1.as_str(), "category")),
             }
 
             for tag in noexist_tag_list {
                 let metas_res = metas::ActiveModel {
-                    name: Set(tag.0.clone()),
-                    slug: Set(tag.1.clone()),
-                    mtype: Set("tag".to_string()),
+                    name: Set(tag.0.to_string()),
+                    slug: Set(tag.1.to_string()),
+                    mtype: Set(tag.2.to_string()),
                     count: Set(1),
                     order: Set(0),
                     parent: Set(0),
