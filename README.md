@@ -51,6 +51,8 @@ cargo run
 - [ ] 容器化
 - [ ] md外链语法
 - [ ] md标准输出模式
+- [ ] main函数导入项目包名
+- [ ] 代理请求
 
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
