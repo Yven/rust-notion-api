@@ -4,9 +4,9 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(table_name = "typecho_relationships")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub cid: i32,
+    pub cid: u32,
     #[sea_orm(primary_key)]
-    pub mid: i32,
+    pub mid: u32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

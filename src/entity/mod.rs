@@ -2,7 +2,7 @@ pub mod contents;
 pub mod metas;
 pub mod relationships;
 
-use sea_orm::{TransactionTrait, DatabaseConnection, ActiveModelTrait, Set, NotSet, EntityTrait, ColumnTrait, QueryFilter};
+use sea_orm::{TransactionTrait, DatabaseConnection, ActiveModelTrait, Set, EntityTrait, ColumnTrait, QueryFilter};
 use crate::error::CommErr;
 
 use super::notion::page;
@@ -13,10 +13,10 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> anyhow::R
     db.transaction::<_, (), CommErr>(|txn| {
         Box::pin(async move {
             let content_res = contents::ActiveModel {
-                title: Set(page.title.clone()),
-                slug: Set(page.search_property("Slug")?[0].0.clone()),
-                created: Set(DateTime::parse_from_rfc3339(&page.created_time)?.timestamp()),
-                modified: Set(DateTime::parse_from_rfc3339(&page.edited_time)?.timestamp()),
+                title: Set(Some(page.title.clone())),
+                slug: Set(Some(page.search_property("Slug")?[0].0.clone())),
+                created: Set(DateTime::parse_from_rfc3339(&page.created_time)?.timestamp() as u32),
+                modified: Set(DateTime::parse_from_rfc3339(&page.edited_time)?.timestamp() as u32),
                 text: Set(page.content.to_string()),
                 author_id: Set(1),
                 ctype: Set("post".to_owned()),
@@ -24,11 +24,8 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> anyhow::R
                 allow_comment: Set("1".to_owned()),
                 allow_ping: Set("0".to_owned()),
                 allow_feed: Set("1".to_owned()),
-                parent: Set(0),
-                cid: NotSet,
                 ..Default::default()
-            }
-            .insert(txn)
+            }.insert(txn)
             .await?;
 
             let tag_list = page.search_property("Tag")?;
@@ -61,22 +58,20 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> anyhow::R
 
             for tag in noexist_tag_list {
                 let metas_res = metas::ActiveModel {
-                    name: Set(tag.0.to_string()),
-                    slug: Set(tag.1.to_string()),
-                    mtype: Set(tag.2.to_string()),
+                    name: Set(Some(tag.0.to_string())),
+                    slug: Set(Some(tag.1.to_string())),
+                    mtype: Set(Some(tag.2.to_string())),
                     count: Set(1),
                     order: Set(0),
                     parent: Set(0),
                     ..Default::default()
-                }
-                .insert(txn)
+                }.insert(txn)
                 .await?;
 
                 relationships::ActiveModel {
                     cid: Set(content_res.cid),
                     mid: Set(metas_res.mid)
-                }
-                .insert(txn)
+                }.insert(txn)
                 .await?;
             }
 
