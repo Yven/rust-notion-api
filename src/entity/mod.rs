@@ -2,14 +2,14 @@ pub mod contents;
 pub mod metas;
 pub mod relationships;
 
-use sea_orm::{TransactionTrait, DatabaseConnection, ActiveModelTrait, Set, EntityTrait, ColumnTrait, QueryFilter};
+use sea_orm::{TransactionTrait, DatabaseConnection, ActiveModelTrait, Set, NotSet, EntityTrait, ColumnTrait, QueryFilter};
 use crate::error::CommErr;
 
 use super::notion::page;
 use chrono::DateTime;
 
 
-pub async fn new_article(db: &DatabaseConnection, page: page::Page, page_content: String) -> anyhow::Result<()> {
+pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> anyhow::Result<()> {
     db.transaction::<_, (), CommErr>(|txn| {
         Box::pin(async move {
             let content_res = contents::ActiveModel {
@@ -17,7 +17,7 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page, page_content
                 slug: Set(page.search_property("Slug")?[0].0.clone()),
                 created: Set(DateTime::parse_from_rfc3339(&page.created_time)?.timestamp()),
                 modified: Set(DateTime::parse_from_rfc3339(&page.edited_time)?.timestamp()),
-                text: Set(page_content),
+                text: Set(page.content.to_string()),
                 author_id: Set(1),
                 ctype: Set("post".to_owned()),
                 status: Set("publish".to_owned()),
@@ -25,6 +25,7 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page, page_content
                 allow_ping: Set("0".to_owned()),
                 allow_feed: Set("1".to_owned()),
                 parent: Set(0),
+                cid: NotSet,
                 ..Default::default()
             }
             .insert(txn)
