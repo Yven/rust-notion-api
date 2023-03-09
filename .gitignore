@@ -1,3 +1,4 @@
 /target
 /template
 .env
+.vscode

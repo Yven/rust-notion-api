@@ -57,6 +57,15 @@ pub enum BlockType {
     Unsupported,
 }
 
+impl BlockType {
+    pub fn be_empty(&self) -> bool {
+        match self {
+            Self::Divider => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
 #[strum(serialize_all = "snake_case")] 
 pub enum Annotation {
