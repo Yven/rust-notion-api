@@ -161,21 +161,16 @@ impl BlockElement {
             _ => "\n".to_string(),
         }
     }
-}
 
-impl FmtDisplay for BlockElement {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut paragraph = String::default();
-        if !self.line_type.be_empty() && self.line.is_empty() {
-            return write!(f, "<br/>");
-        } else {
-            for text in self.line.iter() {
-                paragraph += &text.to_string();
-            }
+    fn special_break_line(&self, content: String) -> String {
+        match self.line_type {
+            BlockType::Callout|BlockType::Quote => content.replace("\n", "<br/>"),
+            _ => content,
         }
+    }
 
+    fn get_status_str(&self) -> String {
         let empty_val = Json::default();
-        let format = self.line_type.get_str("md").unwrap();
         let status_to_replace = if self.status.is_null() {
             ""
         } else if self.status.is_boolean() {
@@ -185,33 +180,47 @@ impl FmtDisplay for BlockElement {
         } else {
             self.status.as_str().unwrap()
         };
-        paragraph = format.replace("{}", &paragraph).replace("{status}", status_to_replace);
 
-        paragraph = match self.line_type {
-            BlockType::Callout|BlockType::Quote => paragraph.replace("\n", "<br/>"),
-            // BlockType::Quote => paragraph.replace("\n", "<br/>"),
-            // BlockType::Heading1|BlockType::Heading2|BlockType::Heading3|BlockType::Code|BlockType::Toggle|BlockType::Equation|BlockType::Paragraph => paragraph,
-            _ => paragraph,
-        };
+        status_to_replace.to_string()
+    }
+
+    fn child_indent(&self, paragraph: String, child_paragraph: String) -> String {
+        {
+            use BlockType::*;
+            match self.line_type {
+                Toggle => paragraph.replace("{child}", &child_paragraph),
+                Quote => format!("{}{}{}", paragraph, "\n>", child_paragraph),
+                Heading1|Heading2|Heading3|Paragraph => format!("{}{}{}", paragraph, "\n\n\t", child_paragraph.replace("\n", "\n\t")),
+                _ => format!("{}{}{}", paragraph, "\n\t", child_paragraph.replace("\n", "\n\t")),
+            }
+        }
+    }
+}
+
+impl FmtDisplay for BlockElement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut paragraph = String::default();
+        if !self.line_type.be_empty() && self.line.is_empty() {
+            return write!(f, "<br/>");
+        } else {
+            for text in self.line.iter() {
+                paragraph = format!("{}{}", paragraph, text.to_string());
+            }
+        }
+
+        paragraph = self.line_type.get_str("md").unwrap()
+            .replace("{}", &paragraph)
+            .replace("{status}", &self.get_status_str());
+        paragraph = self.special_break_line(paragraph);
 
         if !self.child.is_empty() {
             let mut child_paragraph = String::default();
             for child in self.child.iter() {
-                child_paragraph = child_paragraph + &child.to_string() + &child.child_break_line();
+                child_paragraph = format!("{}{}{}", child_paragraph, child.to_string(), child.child_break_line());
             }
             child_paragraph = child_paragraph.trim_end().to_string();
 
-            {
-                use BlockType::*;
-                paragraph = match self.line_type {
-                    Toggle => paragraph.replace("{child}", &child_paragraph),
-                    Quote => paragraph.trim_end().to_string() + "\n>" + &child_paragraph.trim_start(),
-                    // Heading1|Heading2|Heading3 => paragraph + "\n\t" + &child_paragraph,
-                    Heading1|Heading2|Heading3|Paragraph => paragraph.trim_end().to_string() + "\n\n\t" + &child_paragraph.replace("\n", "\n\t"),
-                    _ => paragraph.trim_end().to_string() + "\n\t" + &child_paragraph.replace("\n", "\n\t"),
-                };
-            }
-
+            paragraph = self.child_indent(paragraph, child_paragraph);
             paragraph = paragraph.trim_end().to_string();
         }
 
@@ -249,7 +258,7 @@ impl FmtDisplay for Block {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::default();
         for (key,block) in self.inner.iter().enumerate() {
-            output = output.to_string() + &block.to_string() + &block.break_line(self.inner.get(key+1));
+            output = format!("{}{}{}", output, block.to_string(), block.break_line(self.inner.get(key+1)));
         }
 
         write!(f, "{}", output.trim())
