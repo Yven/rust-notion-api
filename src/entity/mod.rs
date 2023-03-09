@@ -17,7 +17,7 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> anyhow::R
                 slug: Set(Some(page.search_property("Slug")?[0].0.clone())),
                 created: Set(DateTime::parse_from_rfc3339(&page.created_time)?.timestamp() as u32),
                 modified: Set(DateTime::parse_from_rfc3339(&page.edited_time)?.timestamp() as u32),
-                text: Set(page.content.to_string()),
+                text: Set(format!("<!--markdown-->{}", page.content.to_string())),
                 author_id: Set(1),
                 ctype: Set("post".to_owned()),
                 status: Set("publish".to_owned()),

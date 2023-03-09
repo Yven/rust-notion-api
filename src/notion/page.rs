@@ -33,10 +33,12 @@ impl NewImp for Page {
             }
         }
 
+        let publish_time = Page::search_property_static(&properties, "Publish Time")?;
+
         Ok(Page {
             id: get_value_str(page, "id")?,
             created_time: get_value_str(page, "created_time")?,
-            edited_time: get_value_str(page, "last_edited_time")?,
+            edited_time: if !publish_time[0].0.is_empty() { publish_time[0].0.clone() } else { get_value_str(page, "last_edited_time")? },
             author,
             editor_id: get_value_str(&page["last_edited_by"], "id").unwrap_or_default(),
             cover: get_value_str(page, "cover").unwrap_or_default(),
@@ -64,13 +66,16 @@ impl Page {
     }
 
     pub fn search_property(&self, key: &str) -> Result<Vec<(String, String)>> {
+        Page::search_property_static(&self.properties, key)
+    }
+
+    pub fn search_property_static(properties: &Vec<Property>,key: &str) -> Result<Vec<(String, String)>> {
         let mut res = Vec::new();
-        for p in self.properties.iter() {
+        for p in properties.iter() {
             if p.property.get_val() == key {
                 use super::property::PropertyType::*;
                 let data_key = match p.property {
-                    MultiSelect(_) => "name",
-                    Date(_) => "date",
+                    Date(_) => "start",
                     Text(_) => "plain_text",
                     _ => "name",
                 };

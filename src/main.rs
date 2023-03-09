@@ -21,8 +21,9 @@ fn main() -> Result<()> {
         .search::<Database>()?;
 
     for mut page in database.page_list.into_iter() {
-        // let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";
-        // std::fs::write(path, page.content()?)?;
+        let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";
+        std::fs::write(path, page.content()?)?;
+        println!("{:#?}", page);
         page.content()?;
         block_on(entity::new_article(&db, page))?;
     }
