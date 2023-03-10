@@ -40,7 +40,7 @@ cargo run
 - [x] 不同的block|rich_text附带的属性特殊处理
 - [ ] 优化property::new()方法
 - [ ] 优化递归
-- [ ] 完成请求模块的其他方法
+- [x] 完成请求模块的其他方法
 - [x] 静态request模块（或可复用）
 - [ ] <del>全局可复用</del>
 - [x] Page/Database结构和方法
@@ -49,7 +49,7 @@ cargo run
 - [ ] 单元测试
 - [ ] doc,rs文档
 - [ ] 容器化
-- [ ] md外链语法
+- [x] md外链语法
 - [ ] md标准输出模式
 - [ ] main函数导入项目包名
 - [ ] 代理请求

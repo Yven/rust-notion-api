@@ -60,7 +60,11 @@ impl FmtDisplay for FragmentText  {
             };
         }
 
-        write!(f, "{}", anno_format.replace("{}", &self.text))
+        let text = if !self.href.is_empty() {
+            format!("[{}]({})", self.text, self.href)
+        } else { self.text.clone() };
+
+        write!(f, "{}", anno_format.replace("{}", &text))
     }
 }
 

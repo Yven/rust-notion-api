@@ -24,7 +24,8 @@ fn main() -> Result<()> {
         let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";
         std::fs::write(path, page.content()?)?;
         page.content()?;
-        block_on(entity::new_article(&db, page))?;
+        println!("{:#?}", page);
+        // block_on(entity::new_article(&db, page))?;
     }
     Ok(())
 }

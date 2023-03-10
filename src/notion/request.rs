@@ -38,7 +38,7 @@ impl Request {
 
     pub fn query(&self, method: RequestMethod, path: String, body: Json) -> Result<Json> {
         let client = reqwest::blocking::Client::new();
-        let path = self.url.to_owned() + &path;
+        let path = format!("{}{}", self.url, path);
         let client = match method {
             RequestMethod::GET => client.get(path),
             RequestMethod::POST => client.post(path).json(&body),
