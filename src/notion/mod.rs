@@ -74,8 +74,8 @@ impl Notion {
         NotionBuilder::from_filter(self, filter)
     }
 
-    pub fn sort(self, sort: Vec<(PropertyType, Direction)>) -> NotionBuilder  {
-        NotionBuilder::from_sort(self, sort)
+    pub fn sort(self, field: PropertyType, order: Direction) -> NotionBuilder  {
+        NotionBuilder::from_sort(self, vec![(field, order)])
     }
 
     pub fn search<T: NewImp>(self) -> Result<T> {
@@ -89,11 +89,14 @@ impl Notion {
 }
 
 
+const DEFAULT_PAGE_SIZE: i32 = 5;
 pub struct NotionBuilder {
     pub module: Notion,
     request: Request,
     filter: Filter,
     sort: Sort,
+    start_cursor: String,
+    page_size: i32,
 }
 
 impl NotionBuilder {
@@ -102,7 +105,14 @@ impl NotionBuilder {
             Ok(s) => s,
             Err(e) => panic!("{}", e)
         };
-        NotionBuilder { module, request, filter: Filter::default(), sort: Sort::default() }
+        NotionBuilder {
+            module,
+            request,
+            filter: Filter::default(),
+            sort: Sort::default(),
+            start_cursor: String::default(),
+            page_size: DEFAULT_PAGE_SIZE,
+        }
     }
 
     pub fn from_filter(module: Notion, filter: Filter) -> Self {
@@ -110,7 +120,14 @@ impl NotionBuilder {
             Ok(s) => s,
             Err(e) => panic!("{}", e)
         };
-        NotionBuilder { module, request, filter, sort: Sort::default() }
+        NotionBuilder {
+            module,
+            request,
+            filter,
+            sort: Sort::default(),
+            start_cursor: String::default(),
+            page_size: DEFAULT_PAGE_SIZE,
+        }
     }
 
     pub fn from_sort(module: Notion, sort: Vec<(PropertyType, Direction)>) -> Self {
@@ -118,7 +135,14 @@ impl NotionBuilder {
             Ok(s) => s,
             Err(e) => panic!("{}", e)
         };
-        NotionBuilder { module, request, filter: Filter::default(), sort: Sort::new(sort) }
+        NotionBuilder {
+            module,
+            request,
+            filter: Filter::default(),
+            sort: Sort::new(sort),
+            start_cursor: String::default(),
+            page_size: DEFAULT_PAGE_SIZE,
+        }
     }
 
     pub fn filter(mut self, filter: Filter) -> Self {
@@ -149,7 +173,25 @@ impl NotionBuilder {
 
 impl Display for NotionBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, r#"{{"filter": {},"sorts": {}}}"#, self.filter, self.sort)
+        let mut body: Vec<String> = Vec::new();
+
+        if !self.start_cursor.is_empty() {
+            body.push(format!(r#""start_cursor": "{}""#, self.start_cursor));
+        }
+
+        let filter = self.filter.to_string();
+        if !filter.is_empty() {
+            body.push(format!(r#""filter": {}"#, filter));
+        }
+
+        let sort = self.sort.to_string();
+        if !sort.is_empty() {
+            body.push(format!(r#""sorts": {}"#, sort));
+        }
+
+        body.push(format!(r#""page_size": {}"#, self.page_size));
+
+        write!(f, r#"{{{}}}"#, body.join(","))
     }
 }
 

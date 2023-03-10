@@ -33,6 +33,10 @@ impl Default for Sort {
 
 impl FmtDisplay for Sort {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.map.is_empty() {
+            return write!(f, "")
+        }
+
         let mut output = String::from("");
         for (k, v) in self.map.iter() {
             output = output + format!(r#"{{"property":"{}","direction":"{}"}}"#, k.get_val(), v.to_string().to_lowercase()).as_str() + ",";

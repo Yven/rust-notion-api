@@ -38,7 +38,7 @@ cargo run
 - [x] markdown格式映射
 - [ ] <del>常用函数整理为宏</del>
 - [x] 不同的block|rich_text附带的属性特殊处理
-- [ ] 优化property::new()方法
+- [x] 优化property::new()方法
 - [ ] 优化递归
 - [x] 完成请求模块的其他方法
 - [x] 静态request模块（或可复用）
@@ -51,8 +51,9 @@ cargo run
 - [ ] 容器化
 - [x] md外链语法
 - [ ] md标准输出模式
-- [ ] main函数导入项目包名
+- [x] main函数导入项目包名
 - [ ] 代理请求
+- [ ] 调整包结构作为lib
 
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

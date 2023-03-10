@@ -48,6 +48,10 @@ impl Filter {
     }
 
     pub fn build_str(&self) -> String {
+        if self.property.get_val().is_empty() {
+            return "".to_string();
+        }
+
         let mut str = format!(r#"{{"property":"{}","{}":{{"{}":"{}"}}}}"#, self.property.get_val(), self.property.to_string().to_lowercase(), self.condition.0, self.condition.1);
 
         if self.logic_map.capacity() != 0 {
