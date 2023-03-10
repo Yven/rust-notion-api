@@ -54,6 +54,8 @@ cargo run
 - [x] main函数导入项目包名
 - [ ] 代理请求
 - [ ] 调整包结构作为lib
+- [ ] databases的next方法
+- [ ] block自动获取所有分页
 
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

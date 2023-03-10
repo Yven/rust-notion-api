@@ -21,6 +21,9 @@ use anyhow::Result;
 
 pub trait NewImp {
     fn new(val: &Json) -> Result<Self>  where Self: Sized;
+    fn next(&self) -> Result<Self>  where Self: Sized {
+        Err(CommErr::CErr("Do not have next page").into())
+    }
     // fn search(builder: &NotionBuilder) -> Result<Self>  where Self: Sized;
 }
 
@@ -71,25 +74,26 @@ impl Notion {
     }
 
     pub fn filter(self, filter: Filter) -> NotionBuilder {
-        NotionBuilder::from_filter(self, filter)
+        NotionBuilder::new(self).filter(filter)
     }
 
     pub fn sort(self, field: PropertyType, order: Direction) -> NotionBuilder  {
-        NotionBuilder::from_sort(self, vec![(field, order)])
+        NotionBuilder::new(self).sort(field, order)
+    }
+
+    pub fn limit(mut self, page_num: i32) -> NotionBuilder {
+        NotionBuilder::new(self).limit(page_num)
     }
 
     pub fn search<T: NewImp>(self) -> Result<T> {
         let builder = NotionBuilder::new(self);
         let res = builder.request.query(builder.module.method(), builder.module.path(), builder.format_body())?;
-        T::new(
-            res.get("results")
-            .ok_or(CommErr::FormatErr("results"))?
-        )
+        T::new(&res)
     }
 }
 
 
-const DEFAULT_PAGE_SIZE: i32 = 5;
+const DEFAULT_PAGE_SIZE: i32 = 100;
 pub struct NotionBuilder {
     pub module: Notion,
     request: Request,
@@ -115,38 +119,13 @@ impl NotionBuilder {
         }
     }
 
-    pub fn from_filter(module: Notion, filter: Filter) -> Self {
-        let request = match Request::new() {
-            Ok(s) => s,
-            Err(e) => panic!("{}", e)
-        };
-        NotionBuilder {
-            module,
-            request,
-            filter,
-            sort: Sort::default(),
-            start_cursor: String::default(),
-            page_size: DEFAULT_PAGE_SIZE,
-        }
-    }
-
-    pub fn from_sort(module: Notion, sort: Vec<(PropertyType, Direction)>) -> Self {
-        let request = match Request::new() {
-            Ok(s) => s,
-            Err(e) => panic!("{}", e)
-        };
-        NotionBuilder {
-            module,
-            request,
-            filter: Filter::default(),
-            sort: Sort::new(sort),
-            start_cursor: String::default(),
-            page_size: DEFAULT_PAGE_SIZE,
-        }
-    }
-
     pub fn filter(mut self, filter: Filter) -> Self {
-        self.filter = self.filter.and(filter);
+        if self.filter.property.get_val().is_empty() {
+            self.filter = filter;
+        } else {
+            self.filter = self.filter.and(filter);
+        }
+
         self
     }
 
@@ -158,12 +137,14 @@ impl NotionBuilder {
     // pub fn find(&self) -> T {
     // }
 
+    pub fn limit(mut self, size: i32) -> Self {
+        self.page_size = size;
+        self
+    }
+
     pub fn search<T: NewImp>(&self) -> Result<T> {
         let res = self.request.query(self.module.method(), self.module.path(), self.format_body())?;
-        T::new(
-            res.get("results")
-            .ok_or(CommErr::FormatErr("results"))?
-        )
+        T::new(&res)
     }
 
     pub fn format_body(&self) -> Json {

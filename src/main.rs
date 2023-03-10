@@ -11,21 +11,22 @@ fn main() -> Result<()> {
 
     let db = block_on(db_connection())?;
 
-    let s1 = PropertyType::Status("Status").equals("archive");
-    let s2 = PropertyType::MultiSelect("Tag").contains("test");
-    let filter = s1.and(s2);
+    // let s1 = PropertyType::Status("Status").equals("archive");
+    // let s2 = PropertyType::MultiSelect("Tag").contains("test");
+    // let filter = s1.and(s2);
 
     let database = Notion::Databases(env::var("DB_ID")?)
-        .filter(filter)
+        // .filter(filter)
         .sort(PropertyType::Date("Edited time"), Direction::Descending)
         .search::<Database>()?;
+    println!("{:#?}", database);
 
-    for mut page in database.page_list.into_iter() {
-        let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";
-        std::fs::write(path, page.content()?)?;
-        page.content()?;
-        println!("{:#?}", page);
-        // block_on(entity::new_article(&db, page))?;
-    }
+    // for mut page in database.page_list.into_iter() {
+    //     let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";
+    //     std::fs::write(path, page.content()?)?;
+    //     page.content()?;
+    //     println!("{:#?}", page);
+    //     // block_on(entity::new_article(&db, page))?;
+    // }
     Ok(())
 }

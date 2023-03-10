@@ -6,7 +6,7 @@ use super::property::PropertyType;
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct Filter {
-    property: PropertyType,
+    pub property: PropertyType,
     condition: (String, String),
     logic_operate: String,
     logic_map: Vec<Filter>,

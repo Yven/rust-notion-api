@@ -248,9 +248,11 @@ pub struct Block {
 
 impl NewImp for Block {
     fn new(val: &Json) -> Result<Self> {
-        let val = val.as_array().ok_or(CommErr::FormatErr("results"))?;
+        let results = val.get("results").ok_or(CommErr::FormatErr("results"))?
+            .as_array().ok_or(CommErr::FormatErr("results"))?;
+
         let mut inner = Vec::new();
-        for val_arr in val.iter() {
+        for val_arr in results.iter() {
             inner.push(BlockElement::new(val_arr)?);
         }
 
