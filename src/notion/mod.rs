@@ -81,7 +81,7 @@ impl Notion {
         NotionBuilder::new(self).sort(field, order)
     }
 
-    pub fn limit(mut self, page_num: i32) -> NotionBuilder {
+    pub fn limit(self, page_num: i32) -> NotionBuilder {
         NotionBuilder::new(self).limit(page_num)
     }
 
