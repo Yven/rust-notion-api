@@ -33,7 +33,7 @@ impl Author {
 
 
 #[derive(EnumDisplay, EnumString, Debug, PartialEq, Eq, Hash)]
-#[strum(serialize_all = "snake_case")] 
+#[strum(serialize_all = "snake_case")]
 pub enum PropertyType {
     #[strum(serialize="rich_text")]
     Text(&'static str),
@@ -120,14 +120,16 @@ impl Property {
         let type_name = get_value_str(value, "type")?;
 
         let data = if !data.is_array() {
-            vec![data.to_owned()] 
-        } else { 
+            vec![data.to_owned()]
+        } else {
             data.as_array().ok_or(CommErr::FormatErr("property value"))?.to_owned()
         };
 
         let mut property_data_opt = Vec::new();
         for arr_val in data.into_iter() {
-            let property_map = if !arr_val.is_object() {
+            let property_map = if arr_val.is_null() {
+                Map::new()
+            } else if !arr_val.is_object() {
                 let mut mp = Map::new();
                 mp.insert(type_name.clone(), arr_val);
                 mp
@@ -135,11 +137,13 @@ impl Property {
                 arr_val.as_object().ok_or(CommErr::FormatErr("property value"))?.to_owned()
             };
 
-            let mut hm = HashMap::new();
-            for (k, v) in property_map.iter() {
-                hm.insert(k.to_string(), v.as_str().unwrap_or_default().to_string());
+            if !property_map.is_empty() {
+                let mut hm = HashMap::new();
+                for (k, v) in property_map.iter() {
+                    hm.insert(k.to_string(), v.as_str().unwrap_or_default().to_string());
+                }
+                property_data_opt.push(hm);
             }
-            property_data_opt.push(hm);
         }
 
         let property = PropertyType::from_str(&type_name).unwrap().reset_val(key.to_string());

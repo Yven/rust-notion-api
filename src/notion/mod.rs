@@ -190,12 +190,13 @@ fn get_property_value<'a>(property: &'a Json, index: Option<&'static str>) -> Re
 }
 
 /**
- * 获取Json中的某个值的String形式
+ * 获取Json中的某个值的String形式，如果不是String则会返回空字符串
  */
 fn get_value_str(value: &Json, index: &'static str) -> Result<String> {
-    Ok(
-        value.get(index).ok_or(CommErr::FormatErr(index))?
-            .as_str().ok_or(CommErr::GetValueStrErr(index))?
-            .to_string()
-    )
+    let val = value.get(index).ok_or(CommErr::FormatErr(index))?;
+    Ok(if val.is_string() {
+        val.as_str().ok_or(CommErr::GetValueStrErr(index))?.to_string()
+    } else {
+        String::default()
+    })
 }

@@ -18,8 +18,9 @@ fn main() -> Result<()> {
     let database = Notion::Databases(env::var("DB_ID")?)
         // .filter(filter)
         .sort(PropertyType::Date("Edited time"), Direction::Descending)
+        // .limit(5)
         .search::<Database>()?;
-    println!("{:#?}", database);
+    // println!("{:#?}", database);
 
     // for mut page in database.page_list.into_iter() {
     //     let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";

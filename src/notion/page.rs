@@ -79,6 +79,11 @@ impl Page {
                     Text(_) => "plain_text",
                     _ => "name",
                 };
+
+                if p.data.is_empty() {
+                    res.push(("".to_string(), "".to_string()));
+                }
+
                 let msg: &'static str = Box::leak(Box::new(key.to_string()));
                 for p_item in p.data.iter() {
                     res.push((
