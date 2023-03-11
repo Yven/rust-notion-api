@@ -69,7 +69,7 @@ impl Page {
         Page::search_property_static(&self.properties, key)
     }
 
-    pub fn search_property_static(properties: &Vec<Property>,key: &str) -> Result<Vec<(String, String)>> {
+    pub fn search_property_static(properties: &Vec<Property>, key: &str) -> Result<Vec<(String, String)>> {
         let mut res = Vec::new();
         for p in properties.iter() {
             if p.property.get_val() == key {
@@ -79,7 +79,7 @@ impl Page {
                     Text(_) => "plain_text",
                     _ => "name",
                 };
-                let msg: &'static str = Box::leak(Box::new("MultiSelect".to_string() + key));
+                let msg: &'static str = Box::leak(Box::new(key.to_string()));
                 for p_item in p.data.iter() {
                     res.push((
                         p_item.get(data_key).ok_or(CommErr::FormatErr(msg))?.to_string(),
