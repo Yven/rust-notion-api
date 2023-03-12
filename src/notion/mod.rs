@@ -20,8 +20,8 @@ use anyhow::Result;
 
 
 pub trait NewImp {
-    fn new(val: &Json) -> Result<Self>  where Self: Sized;
-    fn next(&self) -> Result<Self>  where Self: Sized {
+    fn new(val: &Json, id: String) -> Result<Self>  where Self: Sized;
+    fn next(&mut self) -> Result<()> {
         Err(CommErr::CErr("Do not have next page").into())
     }
     // fn search(builder: &NotionBuilder) -> Result<Self>  where Self: Sized;
@@ -37,30 +37,6 @@ pub enum Notion {
 }
 
 impl Notion {
-    pub fn path(&self) -> String {
-        {
-            use Notion::*;
-            match self {
-                Databases(id) => "databases/".to_string() + &id + "/query",
-                Pages(id) => "pages/".to_string() + &id,
-                Blocks(id) => "blocks/".to_string() + &id + "/children",
-                Users(id) => "users/".to_string() + &id,
-            }
-        }
-    }
-
-    pub fn method(&self) -> RequestMethod {
-        {
-            use Notion::*;
-            match self {
-                Databases(_) => RequestMethod::POST,
-                Pages(_) => RequestMethod::GET,
-                Blocks(_) => RequestMethod::GET,
-                Users(_) => RequestMethod::GET,
-            }
-        }
-    }
-
     pub fn get_val(&self) -> String {
         {
             use Notion::*;
@@ -85,10 +61,15 @@ impl Notion {
         NotionBuilder::new(self).limit(page_num)
     }
 
+    pub fn start_from(self, cursor: String) -> NotionBuilder {
+        NotionBuilder::new(self).start_from(cursor)
+    }
+
     pub fn search<T: NewImp>(self) -> Result<T> {
+        let id = self.get_val();
         let builder = NotionBuilder::new(self);
-        let res = builder.request.query(builder.module.method(), builder.module.path(), builder.format_body())?;
-        T::new(&res)
+        let res = builder.request.query(builder.method(), builder.path(), builder.format_body())?;
+        T::new(&res, id)
     }
 }
 
@@ -119,6 +100,38 @@ impl NotionBuilder {
         }
     }
 
+    pub fn path(&self) -> String {
+        let mut query_param = Vec::new();
+        if !self.start_cursor.is_empty() {
+            query_param.push(format!("start_cursor={}", self.start_cursor));
+        }
+
+        query_param.push(format!("page_size={}", self.page_size));
+        let param = format!("?{}", query_param.join("&"));
+
+        {
+            use Notion::*;
+            match &self.module {
+                Databases(id) => format!("{}{}{}", "databases/", &id, "/query"),
+                Pages(id) => format!("{}{}", "pages/", &id),
+                Blocks(id) => format!("{}{}{}{}", "blocks/", &id, "/children", param),
+                Users(id) => format!("{}{}", "users/", &id),
+            }
+        }
+    }
+
+    pub fn method(&self) -> RequestMethod {
+        {
+            use Notion::*;
+            match self.module {
+                Databases(_) => RequestMethod::POST,
+                Pages(_) => RequestMethod::GET,
+                Blocks(_) => RequestMethod::GET,
+                Users(_) => RequestMethod::GET,
+            }
+        }
+    }
+
     pub fn filter(mut self, filter: Filter) -> Self {
         if self.filter.property.get_val().is_empty() {
             self.filter = filter;
@@ -142,9 +155,14 @@ impl NotionBuilder {
         self
     }
 
+    pub fn start_from(mut self, cursor: String) -> Self {
+        self.start_cursor = cursor;
+        self
+    }
+
     pub fn search<T: NewImp>(&self) -> Result<T> {
-        let res = self.request.query(self.module.method(), self.module.path(), self.format_body())?;
-        T::new(&res)
+        let res = self.request.query(self.method(), self.path(), self.format_body())?;
+        T::new(&res, self.module.get_val())
     }
 
     pub fn format_body(&self) -> Json {

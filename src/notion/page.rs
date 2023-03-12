@@ -20,7 +20,7 @@ pub struct Page {
 }
 
 impl NewImp for Page {
-    fn new(page: &Json) -> Result<Self> {
+    fn new(page: &Json, _: String) -> Result<Self> {
         let property_list = page.get("properties").ok_or(CommErr::FormatErr("properties"))?;
 
         let author = Author::new(property_list)?;

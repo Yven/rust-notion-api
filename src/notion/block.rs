@@ -23,7 +23,7 @@ impl FragmentText {
             if anno_key == "color" {
                 annotation.push(Annotation::from_str(anno_key).unwrap().reset_val(anno_val.as_str().unwrap()));
                 continue;
-            } 
+            }
             match anno_val.as_bool() {
                 Some(anno_val) => {
                     if anno_val {
@@ -243,11 +243,12 @@ impl FmtDisplay for BlockElement {
 
 #[derive(Debug)]
 pub struct Block {
+    pub id: String,
     pub inner: Vec<BlockElement>
 }
 
 impl NewImp for Block {
-    fn new(val: &Json) -> Result<Self> {
+    fn new(val: &Json, id: String) -> Result<Self> {
         let results = val.get("results").ok_or(CommErr::FormatErr("results"))?
             .as_array().ok_or(CommErr::FormatErr("results"))?;
 
@@ -256,7 +257,19 @@ impl NewImp for Block {
             inner.push(BlockElement::new(val_arr)?);
         }
 
-        Ok(Block { inner })
+        let mut block = Block { id: id.clone(), inner };
+
+        if val.get("has_more").ok_or(CommErr::FormatErr("results"))?.as_bool().unwrap_or_default() {
+            block.append(&mut Notion::Blocks(id).start_from(get_value_str(val, "next_cursor")?).search::<Block>()?);
+        }
+
+        Ok(block)
+    }
+}
+
+impl Block {
+    pub fn append(&mut self, other: &mut Self) {
+        self.inner.append(&mut other.inner);
     }
 }
 
@@ -273,6 +286,6 @@ impl FmtDisplay for Block {
 
 impl Default for Block {
     fn default() -> Self {
-        Block { inner: Vec::new() }
+        Block { id: String::default(), inner: Vec::new() }
     }
 }
