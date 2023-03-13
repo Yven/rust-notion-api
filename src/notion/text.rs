@@ -37,7 +37,7 @@ pub enum BlockType {
     Divider,
     #[strum(props(md="$${}$$"))]
     Equation,
-    #[strum(props(md="![{}]({})"))]
+    #[strum(props(md="![{}]({file})"))]
     Image,
     Template,
     ChildPage,

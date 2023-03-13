@@ -3,6 +3,8 @@ use std::fmt::Display as FmtDisplay;
 use anyhow::Result;
 use strum::EnumProperty;
 use serde_json::Map;
+use base64::{Engine as _, engine::general_purpose};
+use image::ImageFormat;
 
 use super::{Notion, CommErr, get_value_str, get_property_value, Json, NewImp, text::*};
 
@@ -76,11 +78,19 @@ pub struct BlockElement {
     pub color: AnnoColor,
     pub child: Vec<BlockElement>,
     pub status: Json,
+    pub file: (String, String),
 }
 
 impl BlockElement {
     fn from_type(line_type: BlockType) -> Self {
-        BlockElement { line: Vec::new(), line_type, color: AnnoColor::Default, child: Vec::new(), status: Json::default() }
+        BlockElement {
+            line: Vec::new(),
+            line_type,
+            color: AnnoColor::Default,
+            child: Vec::new(),
+            status: Json::default(),
+            file: (String::default(), String::default()),
+        }
     }
 
     fn from_text(line_type: BlockType, text: String) -> Self {
@@ -90,7 +100,18 @@ impl BlockElement {
             color: AnnoColor::default(),
             child: Vec::new(),
             status: Json::default(),
+            file: (String::default(), String::default()),
         }
+    }
+
+    pub fn img_to_base64(path: &str) -> Result<String> {
+        let client = reqwest::blocking::Client::new();
+        let res = client.get(path).send()?;
+        let code = res.status();
+        if code.is_success() {
+            return Ok(general_purpose::STANDARD.encode(res.bytes()?));
+        }
+        Err(CommErr::HttpResErr("Request image in Notin Error").into())
     }
 
     pub fn new(value: &Json) -> Result<Self> {
@@ -100,44 +121,67 @@ impl BlockElement {
         match line_type {
             BlockType::Divider => return Ok(BlockElement::from_type(line_type)),
             BlockType::Equation => return Ok(BlockElement::from_text(line_type, get_value_str(block, "expression")?)),
-            _ => (),
+            BlockType::Image => {
+                let mut line: Vec<FragmentText> = Vec::new();
+                for v in block.get("caption")
+                    .ok_or(CommErr::FormatErr("caption"))?
+                    .as_array().ok_or(CommErr::FormatErr("caption"))?.iter()
+                {
+                    line.push(FragmentText::new(v)?);
+                }
+
+                let url = get_value_str(get_property_value(block, None)?, "url")?;
+                let file = BlockElement::img_to_base64(&url)?;
+                let format = ImageFormat::from_path(url.split("?").collect::<Vec<&str>>()[0])?;
+                let file = (file, format.extensions_str()[0].to_lowercase().to_string());
+
+                return Ok(BlockElement {
+                    line,
+                    line_type,
+                    color: AnnoColor::default(),
+                    child: Vec::new(),
+                    status: Json::default(),
+                    file,
+                });
+            },
+            _ => {
+                let rich_text = block.get("rich_text")
+                    .ok_or(CommErr::UnsupportErr)?
+                    .as_array().ok_or(CommErr::FormatErr("rich text"))?;
+
+                let mut line: Vec<FragmentText> = Vec::new();
+                for v in rich_text.iter() {
+                    line.push(FragmentText::new(v)?);
+                }
+
+                let color  = AnnoColor::from_str(&get_value_str(block, "color").unwrap_or_default()).unwrap_or_default();
+
+                // TODO: 异步
+                let mut child = Vec::new();
+                if value.get("has_children")
+                    .ok_or(CommErr::FormatErr("has_children"))?
+                    .as_bool().ok_or(CommErr::FormatErr("has_children"))?
+                {
+                    let block = Notion::Blocks(get_value_str(value, "id")?).search::<Block>()?;
+                    for be in block.inner.into_iter() {
+                        child.push(be);
+                    }
+                }
+
+                let status = {
+                    use BlockType::*;
+                    match line_type {
+                        Heading1|Heading2|Heading3 => block.get("is_toggleable").ok_or(CommErr::FormatErr("is_toggleable"))?.to_owned(),
+                        ToDo => block.get("checked").ok_or(CommErr::FormatErr("checked"))?.to_owned(),
+                        Callout => block.get("icon").ok_or(CommErr::FormatErr("icon"))?.to_owned(),
+                        Code => block.get("language").ok_or(CommErr::FormatErr("language"))?.to_owned(),
+                        _ => Json::default(),
+                    }
+                };
+
+                return Ok(BlockElement { line, line_type, color, child, status, file: (String::default(), String::default()) });
+            },
         }
-
-        let rich_text = block.get("rich_text")
-            .ok_or(CommErr::UnsupportErr)?
-            .as_array().ok_or(CommErr::FormatErr("rich text"))?;
-
-        let mut line: Vec<FragmentText> = Vec::new();
-        for v in rich_text.iter() {
-            line.push(FragmentText::new(v)?);
-        }
-
-        let color  = AnnoColor::from_str(&get_value_str(block, "color").unwrap_or_default()).unwrap_or_default();
-
-        // TODO: 异步
-        let mut child = Vec::new();
-        if value.get("has_children")
-            .ok_or(CommErr::FormatErr("has_children"))?
-            .as_bool().ok_or(CommErr::FormatErr("has_children"))?
-        {
-            let block = Notion::Blocks(get_value_str(value, "id")?).search::<Block>()?;
-            for be in block.inner.into_iter() {
-                child.push(be);
-            }
-        }
-
-        let status = {
-            use BlockType::*;
-            match line_type {
-                Heading1|Heading2|Heading3 => block.get("is_toggleable").ok_or(CommErr::FormatErr("is_toggleable"))?.to_owned(),
-                ToDo => block.get("checked").ok_or(CommErr::FormatErr("checked"))?.to_owned(),
-                Callout => block.get("icon").ok_or(CommErr::FormatErr("icon"))?.to_owned(),
-                Code => block.get("language").ok_or(CommErr::FormatErr("language"))?.to_owned(),
-                _ => Json::default(),
-            }
-        };
-
-        Ok(BlockElement { line, line_type, color, child, status })
     }
 
     fn break_line(&self, next_line: Option<&BlockElement>) -> String {
@@ -214,7 +258,8 @@ impl FmtDisplay for BlockElement {
 
         paragraph = self.line_type.get_str("md").unwrap()
             .replace("{}", &paragraph)
-            .replace("{status}", &self.get_status_str());
+            .replace("{status}", &self.get_status_str())
+            .replace("{file}", &format!("data:image/{};base64,{}", self.file.1, self.file.0));
         paragraph = self.special_break_line(paragraph);
 
         if !self.child.is_empty() {
