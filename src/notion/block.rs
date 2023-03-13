@@ -1,12 +1,10 @@
-use std::str::FromStr;
+use std::{str::FromStr, path::Path};
 use std::fmt::Display as FmtDisplay;
 use anyhow::Result;
 use strum::EnumProperty;
 use serde_json::Map;
-use base64::{Engine as _, engine::general_purpose};
-use image::ImageFormat;
 
-use super::{Notion, CommErr, get_value_str, get_property_value, Json, NewImp, text::*};
+use super::{Notion, CommErr, get_value_str, get_property_value, Json, NewImp, text::*, img_to_base64};
 
 
 #[derive(Debug)]
@@ -78,7 +76,7 @@ pub struct BlockElement {
     pub color: AnnoColor,
     pub child: Vec<BlockElement>,
     pub status: Json,
-    pub file: (String, String),
+    pub file: String,
 }
 
 impl BlockElement {
@@ -89,7 +87,7 @@ impl BlockElement {
             color: AnnoColor::Default,
             child: Vec::new(),
             status: Json::default(),
-            file: (String::default(), String::default()),
+            file: String::default(),
         }
     }
 
@@ -100,18 +98,8 @@ impl BlockElement {
             color: AnnoColor::default(),
             child: Vec::new(),
             status: Json::default(),
-            file: (String::default(), String::default()),
+            file: String::default(),
         }
-    }
-
-    pub fn img_to_base64(path: &str) -> Result<String> {
-        let client = reqwest::blocking::Client::new();
-        let res = client.get(path).send()?;
-        let code = res.status();
-        if code.is_success() {
-            return Ok(general_purpose::STANDARD.encode(res.bytes()?));
-        }
-        Err(CommErr::HttpResErr("Request image in Notin Error").into())
     }
 
     pub fn new(value: &Json) -> Result<Self> {
@@ -130,18 +118,13 @@ impl BlockElement {
                     line.push(FragmentText::new(v)?);
                 }
 
-                let url = get_value_str(get_property_value(block, None)?, "url")?;
-                let file = BlockElement::img_to_base64(&url)?;
-                let format = ImageFormat::from_path(url.split("?").collect::<Vec<&str>>()[0])?;
-                let file = (file, format.extensions_str()[0].to_lowercase().to_string());
-
                 return Ok(BlockElement {
                     line,
                     line_type,
                     color: AnnoColor::default(),
                     child: Vec::new(),
                     status: Json::default(),
-                    file,
+                    file: img_to_base64(&get_value_str(get_property_value(block, None)?, "url")?)?,
                 });
             },
             _ => {
@@ -179,7 +162,7 @@ impl BlockElement {
                     }
                 };
 
-                return Ok(BlockElement { line, line_type, color, child, status, file: (String::default(), String::default()) });
+                return Ok(BlockElement { line, line_type, color, child, status, file: String::default() });
             },
         }
     }
@@ -259,7 +242,7 @@ impl FmtDisplay for BlockElement {
         paragraph = self.line_type.get_str("md").unwrap()
             .replace("{}", &paragraph)
             .replace("{status}", &self.get_status_str())
-            .replace("{file}", &format!("data:image/{};base64,{}", self.file.1, self.file.0));
+            .replace("{file}", &self.file);
         paragraph = self.special_break_line(paragraph);
 
         if !self.child.is_empty() {

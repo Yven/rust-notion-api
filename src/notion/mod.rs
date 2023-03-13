@@ -218,3 +218,22 @@ fn get_value_str(value: &Json, index: &'static str) -> Result<String> {
         String::default()
     })
 }
+
+/**
+ * 获取图片并转换为base64
+ */
+fn img_to_base64(path: &str) -> Result<String> {
+    match path.find("secure.notion-static.com") {
+        Some(_) => return Ok(String::default()),
+        None => {
+            use base64::{Engine as _, engine::general_purpose};
+            let res = reqwest::blocking::Client::new().get(path).send()?;
+            let code = res.status();
+            if code.is_success() {
+                let ext = std::path::Path::new(path.split("?").collect::<Vec<&str>>()[0]).extension().unwrap().to_str().unwrap().to_string();
+                return Ok(format!("data:image/{};base64,{}", ext, general_purpose::STANDARD.encode(res.bytes()?)));
+            }
+            Err(CommErr::HttpResErr("Request image in Notin Error").into())
+        }
+    }
+}
