@@ -1,5 +1,4 @@
 use futures::executor::block_on;
-use notion_api::notion::NewImp;
 use notion_api::notion::{Notion, property::PropertyType, sort::Direction, database::Database};
 use notion_api::{db_connection, entity};
 use anyhow::{Result, Ok};
@@ -12,27 +11,26 @@ fn main() -> Result<()> {
 
     let db = block_on(db_connection())?;
 
-    // let s1 = PropertyType::Status("Status").equals("archive");
-    // let s2 = PropertyType::MultiSelect("Tag").contains("test");
-    // let filter = s1.and(s2);
+    let s1 = PropertyType::Status("Status").equals("archive");
+    let s2 = PropertyType::MultiSelect("Tag").contains("test");
+    let filter = s1.and(s2);
 
-    let mut database = Notion::Databases(env::var("DB_ID")?)
-        // .filter(filter)
+    let database = Notion::Databases(env::var("DB_ID")?)
+        .filter(filter)
         .sort(PropertyType::Date("Edited time"), Direction::Descending)
-        .limit(5)
+        // .limit(5)
         .search::<Database>()?;
 
-    while database.has_more {
-        database.next()?;
-    }
-
-    println!("{:#?}", database.page_list.len());
-
-    // for mut page in database.page_list.into_iter() {
-    //     let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";
-    //     std::fs::write(path, page.content()?)?;
-    //     println!("{:#?}", page);
-    //     // block_on(entity::new_article(&db, page))?;
+    // while database.has_more {
+    //     database.next()?;
     // }
+
+
+    for mut page in database.page_list.into_iter() {
+        let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";
+        std::fs::write(path, page.content()?)?;
+        // println!("{:#?}", page);
+        // block_on(entity::new_article(&db, page))?;
+    }
     Ok(())
 }

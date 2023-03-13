@@ -4,7 +4,7 @@ use strum_macros::{Display as Enumdisplay, EnumString};
 
 
 #[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
-#[strum(serialize_all = "snake_case")] 
+#[strum(serialize_all = "snake_case")]
 pub enum BlockType {
     // rich text
     #[strum(props(md="{}"))]
@@ -37,11 +37,12 @@ pub enum BlockType {
     Divider,
     #[strum(props(md="$${}$$"))]
     Equation,
+    #[strum(props(md="![{}]({})"))]
+    Image,
     Template,
     ChildPage,
     ChildDatabase,
     Embed,
-    Image,
     Video,
     File,
     Pdf,
@@ -67,7 +68,7 @@ impl BlockType {
 }
 
 #[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
-#[strum(serialize_all = "snake_case")] 
+#[strum(serialize_all = "snake_case")]
 pub enum Annotation {
     #[strum(props(md="**{}**", mdrpl="__{}__"))]
     Bold,
@@ -115,7 +116,7 @@ impl Annotation {
 
 
 #[derive(Enumdisplay, EnumString, EnumProperty, Default, Debug)]
-#[strum(serialize_all = "snake_case")] 
+#[strum(serialize_all = "snake_case")]
 pub enum AnnoColor {
     #[default] Default,
     #[strum(props(md="color=blue"))]
