@@ -3,10 +3,11 @@ use strum::EnumProperty;
 use strum_macros::{Display as Enumdisplay, EnumString};
 
 
-#[derive(Enumdisplay, EnumString, EnumProperty, Debug)]
+#[derive(Enumdisplay, EnumString, EnumProperty, Debug, Default)]
 #[strum(serialize_all = "snake_case")]
 pub enum BlockType {
     // rich text
+    #[default]
     #[strum(props(md="{}"))]
     Paragraph,
     #[strum(serialize="heading_1")]

@@ -7,7 +7,7 @@ use serde_json::Map;
 use super::{Notion, CommErr, get_value_str, get_property_value, Json, NewImp, text::*, img_to_base64};
 
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct FragmentText {
     pub text: String,
     pub href: String,
@@ -69,7 +69,7 @@ impl FmtDisplay for FragmentText  {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct BlockElement {
     pub line: Vec<FragmentText>,
     pub line_type: BlockType,
@@ -80,39 +80,22 @@ pub struct BlockElement {
 }
 
 impl BlockElement {
-    fn from_type(line_type: BlockType) -> Self {
-        BlockElement {
-            line: Vec::new(),
-            line_type,
-            color: AnnoColor::Default,
-            child: Vec::new(),
-            status: Json::default(),
-            file: String::default(),
-        }
-    }
-
-    fn from_text(line_type: BlockType, text: String) -> Self {
-        BlockElement {
-            line: vec![ FragmentText { text, href: String::default(), annotation: Vec::new() } ],
-            line_type,
-            color: AnnoColor::default(),
-            child: Vec::new(),
-            status: Json::default(),
-            file: String::default(),
-        }
-    }
-
     pub fn new(value: &Json) -> Result<Self> {
         let block = get_property_value(value, None)?;
         let line_type = BlockType::from_str(&get_value_str(value, "type")?)?;
 
         match line_type {
-            BlockType::Divider => return Ok(BlockElement::from_type(line_type)),
-            BlockType::Equation => return Ok(BlockElement::from_text(line_type, get_value_str(block, "expression")?)),
+            BlockType::Divider => return Ok(BlockElement { line_type, ..Default::default() }),
+            BlockType::Equation => return Ok(
+                BlockElement {
+                    line: vec![FragmentText { text: get_value_str(block, "expression")?, ..Default::default() }],
+                    line_type,
+                    ..Default::default()
+                }
+            ),
             BlockType::Image => {
                 let mut line: Vec<FragmentText> = Vec::new();
-                for v in block.get("caption")
-                    .ok_or(CommErr::FormatErr("caption"))?
+                for v in block.get("caption").ok_or(CommErr::FormatErr("caption"))?
                     .as_array().ok_or(CommErr::FormatErr("caption"))?.iter()
                 {
                     line.push(FragmentText::new(v)?);
@@ -121,10 +104,8 @@ impl BlockElement {
                 return Ok(BlockElement {
                     line,
                     line_type,
-                    color: AnnoColor::default(),
-                    child: Vec::new(),
-                    status: Json::default(),
                     file: img_to_base64(&get_value_str(get_property_value(block, None)?, "url")?)?,
+                    ..Default::default()
                 });
             },
             _ => {
