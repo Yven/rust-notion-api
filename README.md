@@ -41,33 +41,13 @@ DB_NAME=
 ```shell
 cargo run
 ```
-## NowTODO
-- [ ] 查询文章是否存在，存在则修改，不存在则新增
-- [ ] 发布文章后修改状态，添加更新page方法
-- [ ] 下载图片
+
+## TODO
+- [ ] 文章发布流程
+- [ ] 生成静态页面
 - [ ] doc,rs文档
 - [ ] 单元测试
 - [ ] 容器化
-## TODO LIST
-- [x] 分隔筛选和排序
-- [x] 添加block结构和生成方法
-- [x] 统一错误结构
-- [x] markdown格式映射
-- [x] 静态request模块（或可复用）
-- [x] Page/Database结构和方法
-- [x] md外链语法
-- [x] main函数导入项目包名
-- [x] databases的next方法
-- [x] block自动获取所有分页
-- [x] 请求分页参数处理
-- [ ] 优化递归
-- [ ] 异步请求
-- [ ] md标准输出模式
-- [ ] 代理请求
-- [ ] 从notion模块中分离具体的业务逻辑
-- [ ] 抽象数据库并适应不同的平台
-- [ ] 优化文件体积
-- [ ] 增加数据库连接的配置
 
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
