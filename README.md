@@ -1,61 +1,73 @@
 <div align="center">
 
-# Rust Notion Api
-使用Rust调用Notion API获取内容，可以选择导出页面为`.md`或`.html`文件
+# Rust Notion API
+使用Rust调用Notion API获取内容，导入到Typecho的文章数据库中，或导出页面为`.md`或`.html`文件
 
 </div>
 
 ## 特性
 - [x] 调用Notion API获取页面内容
-- [x] 输出页面为Markdown
-- [ ] 输出页面为HTML
+- [x] 写入到Typecho数据库中
+- [x] 输出页面为Markdown、HTML
 - [ ] 作为rust-lib调用
 - [ ] 使用命令行调用
+- [ ] 使用Docker运行
 
 ## 安装
 
 ## 使用
 ### 1.复制并修改配置文件
 ```shell
-cp secret.json.example secret.json
+cp env.example .env
 ```
-将你申请的Notion API密钥和要查询的databases id写入
+1. 参考[官方文档](https://developers.notion.com/docs/create-a-notion-integration)创建integration并获取Token，然后填入key中
+2. 在你的文章Database中点击share然后copy link获取链接中的database_id
+   1. 如此形式：`https://www.notion.so/{name}/{database_id}?v={view_id}`
+3. 填写你的Typecho数据库配置
+```
+# 填入Notion Integration Token
+KEY=
+# 填入database id
+DB_ID=
+
+# 以下为Typecho数据库的配置
+DB_HOST=
+DB_USER=
+DB_PASSWORD=
+DB_NAME=
+```
 
 ### 2.运行
 ```shell
 cargo run
 ```
-
+## NowTODO
+- [ ] 查询文章是否存在，存在则修改，不存在则新增
+- [ ] 发布文章后修改状态，添加更新page方法
+- [ ] 下载图片
+- [ ] doc,rs文档
+- [ ] 单元测试
+- [ ] 容器化
 ## TODO LIST
-- [x] 构造请求筛选器
 - [x] 分隔筛选和排序
-- [x] 分离筛选模块中的属性模块，方便复用
 - [x] 添加block结构和生成方法
-- [x] 优化各结构to_string方法
-- [x] 整理结构和调用关系（调整notion模块的结构）
-- [x] 完成筛选模块中属性的其他匹配方法
 - [x] 统一错误结构
 - [x] markdown格式映射
-- [ ] <del>常用函数整理为宏</del>
-- [x] 不同的block|rich_text附带的属性特殊处理
-- [x] 优化property::new()方法
-- [ ] 优化递归
-- [x] 完成请求模块的其他方法
 - [x] 静态request模块（或可复用）
-- [ ] <del>全局可复用</del>
 - [x] Page/Database结构和方法
-- [ ] 请求分页参数处理
-- [ ] 异步请求
-- [ ] 单元测试
-- [ ] doc,rs文档
-- [ ] 容器化
 - [x] md外链语法
-- [ ] md标准输出模式
 - [x] main函数导入项目包名
-- [ ] 代理请求
-- [ ] 调整包结构作为lib
 - [x] databases的next方法
 - [x] block自动获取所有分页
+- [x] 请求分页参数处理
+- [ ] 优化递归
+- [ ] 异步请求
+- [ ] md标准输出模式
+- [ ] 代理请求
+- [ ] 从notion模块中分离具体的业务逻辑
+- [ ] 抽象数据库并适应不同的平台
+- [ ] 优化文件体积
+- [ ] 增加数据库连接的配置
 
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
