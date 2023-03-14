@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::fmt::Display;
 use crate::notion::get_property_value;
 
 use super::{filter::Filter, CommErr, get_value_str, Json};
@@ -153,5 +154,50 @@ impl Property {
             data: property_data_opt,
         })
     }
+
+    fn data_key(&self) -> String {
+        use super::property::PropertyType::*;
+        match self.property {
+            Date(_) => "start".to_string(),
+            Text(_) => "plain_text".to_string(),
+            _ => "name".to_string(),
+        }
+    }
+
+    pub fn to_string_array(&self) -> Result<Vec<String>> {
+        if self.data.len() > 1 {
+            let msg: &'static str = Box::leak(Box::new(self.property.get_val()));
+            return Err(CommErr::FormatErr(msg).into());
+        }
+
+        let key = self.data_key();
+
+        let mut res = Vec::new();
+        let msg: &'static str = Box::leak(Box::new(key.to_string()));
+        for p_item in self.data.iter() {
+            res.push(p_item.get(&key).ok_or(CommErr::FormatErr(msg))?.to_owned());
+        }
+
+        Ok(res)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        if self.data.is_empty() { return true; } else { return false; }
+    }
 }
 
+impl Display for Property {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let key = self.data_key();
+
+        if self.data.is_empty() {
+            return write!(f, "");
+        }
+
+        if self.data.len() > 1 {
+            return Err(std::fmt::Error);
+        }
+
+        write!(f, "{}", self.data[0].get(&key).ok_or(std::fmt::Error)?)
+    }
+}

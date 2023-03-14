@@ -3,11 +3,12 @@ pub mod metas;
 pub mod relationships;
 
 use sea_orm::{TransactionTrait, DatabaseConnection, ActiveModelTrait, Set, EntityTrait, ColumnTrait, QueryFilter};
-use crate::error::CommErr;
-
-use super::notion::page;
+use md5::{Md5, Digest};
 use chrono::DateTime;
 use anyhow::Result;
+
+use crate::error::CommErr;
+use super::notion::page;
 
 
 pub async fn is_exist(db: &DatabaseConnection, slug: String) -> Result<bool> {
@@ -23,7 +24,7 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> Result<()
         Box::pin(async move {
             let content_res = contents::ActiveModel {
                 title: Set(Some(page.title.clone())),
-                slug: Set(Some(page.search_property("Slug")?[0].0.clone())),
+                slug: Set(Some(page.search_property("Slug").ok_or(CommErr::FormatErr("Slug"))?.to_string())),
                 created: Set(DateTime::parse_from_rfc3339(&page.created_time)?.timestamp() as u32),
                 modified: Set(DateTime::parse_from_rfc3339(&page.edited_time)?.timestamp() as u32),
                 text: Set(format!("<!--markdown-->{}", page.content.to_string())),
@@ -37,10 +38,10 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> Result<()
             }.insert(txn)
             .await?;
 
-            let tag_list = page.search_property("Tag")?;
+            let tag_list = page.search_property("Tag").ok_or(CommErr::FormatErr("Tag"))?.to_string_array()?;
             let mut noexist_tag_list = Vec::new();
-            for tag in tag_list.iter() {
-                let metas_model = metas::Entity::find().filter(metas::Column::Name.eq(tag.0.clone())).one(txn).await?;
+            for tag in tag_list.into_iter() {
+                let metas_model = metas::Entity::find().filter(metas::Column::Name.eq(tag.clone())).one(txn).await?;
 
                 match metas_model {
                     Some(model) => {
@@ -49,12 +50,12 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> Result<()
                         model.count = Set(count + 1);
                         model.update(txn).await?;
                     },
-                    None => noexist_tag_list.push((tag.0.as_str(), tag.1.as_str(), "tag")),
+                    None => noexist_tag_list.push((tag, "tag".to_string())),
                 }
             }
 
-            let category = page.search_property("Category")?;
-            let metas_model = metas::Entity::find().filter(metas::Column::Name.eq(category[0].0.clone())).one(txn).await?;
+            let category = page.search_property("Category").ok_or(CommErr::FormatErr("Category"))?.to_string();
+            let metas_model = metas::Entity::find().filter(metas::Column::Name.eq(category.clone())).one(txn).await?;
             match metas_model {
                 Some(model) => {
                     let count = model.count;
@@ -62,14 +63,16 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> Result<()
                     model.count = Set(count + 1);
                     model.update(txn).await?;
                 },
-                None => noexist_tag_list.push((category[0].0.as_str(), category[0].1.as_str(), "category")),
+                None => noexist_tag_list.push((category, "category".to_string())),
             }
 
             for tag in noexist_tag_list {
+                let mut hasher = Md5::new();
+                hasher.update(tag.0.clone());
                 let metas_res = metas::ActiveModel {
-                    name: Set(Some(tag.0.to_string())),
-                    slug: Set(Some(tag.1.to_string())),
-                    mtype: Set(Some(tag.2.to_string())),
+                    name: Set(Some(tag.0)),
+                    slug: Set(Some(format!("{:?}", hasher.finalize()))),
+                    mtype: Set(Some(tag.1)),
                     count: Set(1),
                     order: Set(0),
                     parent: Set(0),
@@ -95,14 +98,14 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> Result<()
 pub async fn update_article(db: &DatabaseConnection, page: page::Page) -> Result<()> {
     db.transaction::<_, (), CommErr>(|txn| {
         Box::pin(async move {
-            let slug = page.search_property("slug")?;
-            let model = contents::Entity::find().filter(contents::Column::Slug.eq(Some(slug[0].0.clone()))).one(txn).await?.ok_or(CommErr::CErr("page do not exist"))?;
+            let slug = page.search_property("Slug").ok_or(CommErr::FormatErr("Slug"))?.to_string();
+            let contents_model = contents::Entity::find().filter(contents::Column::Slug.eq(Some(slug.clone()))).one(txn).await?.ok_or(CommErr::CErr("page do not exist"))?;
 
-            let mut model: self::contents::ActiveModel = model.into();
-            model.title = Set(Some(page.title.clone()));
-            model.modified = Set(DateTime::parse_from_rfc3339(&page.edited_time)?.timestamp() as u32);
-            model.text = Set(format!("<!--markdown-->{}", page.content.to_string()));
-            model.update(txn).await?;
+            let mut contents_model: self::contents::ActiveModel = contents_model.into();
+            contents_model.title = Set(Some(page.title.clone()));
+            contents_model.modified = Set(DateTime::parse_from_rfc3339(&page.edited_time)?.timestamp() as u32);
+            contents_model.text = Set(format!("<!--markdown-->{}", page.content.to_string()));
+            contents_model.update(txn).await?;
 
             Ok(())
         })
