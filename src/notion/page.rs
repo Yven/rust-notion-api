@@ -38,7 +38,7 @@ impl NewImp for Page {
         Ok(Page {
             id: get_value_str(page, "id")?,
             created_time: get_value_str(page, "created_time")?,
-            edited_time: if !publish_time[0].0.is_empty() { publish_time[0].0.clone() } else { get_value_str(page, "last_edited_time")? },
+            edited_time: if !publish_time.is_empty() { publish_time } else { get_value_str(page, "last_edited_time")? },
             author,
             editor_id: get_value_str(&page["last_edited_by"], "id").unwrap_or_default(),
             cover: get_value_str(page, "cover").unwrap_or_default(),
@@ -65,36 +65,32 @@ impl Page {
         Ok(self.content.to_string())
     }
 
-    pub fn search_property(&self, key: &str) -> Result<Vec<(String, String)>> {
+    pub fn search_property(&self, key: &str) -> Result<&Property> {
         Page::search_property_static(&self.properties, key)
     }
 
-    pub fn search_property_static(properties: &Vec<Property>, key: &str) -> Result<Vec<(String, String)>> {
-        let mut res = Vec::new();
+    pub fn search_property_static<'a>(properties: &'a Vec<Property>, key: &str) -> Result<&'a Property> {
         for p in properties.iter() {
             if p.property.get_val() == key {
-                use super::property::PropertyType::*;
-                let data_key = match p.property {
-                    Date(_) => "start",
-                    Text(_) => "plain_text",
-                    _ => "name",
-                };
+                // use super::property::PropertyType::*;
+                // let data_key = match p.property {
+                //     Date(_) => "start",
+                //     Text(_) => "plain_text",
+                //     _ => "name",
+                // };
 
-                if p.data.is_empty() {
-                    res.push(("".to_string(), "".to_string()));
-                }
+                // if p.data.is_empty() {
+                //     return Ok("".to_string());
+                // }
 
-                let msg: &'static str = Box::leak(Box::new(key.to_string()));
-                for p_item in p.data.iter() {
-                    res.push((
-                        p_item.get(data_key).ok_or(CommErr::FormatErr(msg))?.to_string(),
-                        p_item.get("id").unwrap_or(&String::default()).to_string(),
-                    ));
-                }
-                break;
+                // let msg: &'static str = Box::leak(Box::new(key.to_string()));
+                // for p_item in p.data.into_iter() {
+                //     return Ok(p_item.get(data_key).ok_or(CommErr::FormatErr(msg))?.to_owned());
+                // }
+                return Ok(p);
             }
         }
 
-        Ok(res)
+        Err(CommErr::CErr("property key do not exist").into())
     }
 }
