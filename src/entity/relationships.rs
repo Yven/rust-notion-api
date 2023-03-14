@@ -1,15 +1,70 @@
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Default)]
-#[sea_orm(table_name = "typecho_relationships")]
+#[derive(Copy, Clone, Default, Debug, DeriveEntity)]
+pub struct Entity;
+
+impl EntityName for Entity {
+    fn table_name(&self) -> &str {
+        "typecho_relationships"
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, DeriveModel, DeriveActiveModel)]
 pub struct Model {
-    #[sea_orm(primary_key)]
     pub cid: u32,
-    #[sea_orm(primary_key)]
     pub mid: u32,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+#[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
+pub enum Column {
+    Cid,
+    Mid,
+}
+
+#[derive(Copy, Clone, Debug, EnumIter, DerivePrimaryKey)]
+pub enum PrimaryKey {
+    Cid,
+    Mid,
+}
+
+impl PrimaryKeyTrait for PrimaryKey {
+    type ValueType = (i32, i32);
+
+    fn auto_increment() -> bool {
+        false
+    }
+}
+
+#[derive(Copy, Clone, Debug, EnumIter)]
+pub enum Relation {
+    Content,
+    Meta,
+}
+
+impl ColumnTrait for Column {
+    type EntityName = Entity;
+
+    fn def(&self) -> ColumnDef {
+        match self {
+            Self::Cid => ColumnType::Integer.def(),
+            Self::Mid => ColumnType::Integer.def(),
+        }
+    }
+}
+
+impl RelationTrait for Relation {
+    fn def(&self) -> RelationDef {
+        match self {
+            Self::Content => Entity::belongs_to(super::contents::Entity)
+                .from(Column::Cid)
+                .to(super::contents::Column::Cid)
+                .into(),
+            Self::Meta => Entity::belongs_to(super::metas::Entity)
+                .from(Column::Mid)
+                .to(super::metas::Column::Mid)
+                .into(),
+        }
+    }
+}
 
 impl ActiveModelBehavior for ActiveModel {}

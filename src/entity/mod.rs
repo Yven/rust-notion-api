@@ -2,7 +2,7 @@ pub mod contents;
 pub mod metas;
 pub mod relationships;
 
-use sea_orm::{TransactionTrait, DatabaseConnection, ActiveModelTrait, Set, EntityTrait, ColumnTrait, QueryFilter};
+use sea_orm::{TransactionTrait, DatabaseConnection, ActiveModelTrait, Set, EntityTrait, ColumnTrait, QueryFilter, ModelTrait, QueryTrait};
 use md5::{Md5, Digest};
 use chrono::DateTime;
 use anyhow::Result;
@@ -100,6 +100,10 @@ pub async fn update_article(db: &DatabaseConnection, page: page::Page) -> Result
         Box::pin(async move {
             let slug = page.search_property("Slug").ok_or(CommErr::FormatErr("Slug"))?.to_string();
             let contents_model = contents::Entity::find().filter(contents::Column::Slug.eq(Some(slug.clone()))).one(txn).await?.ok_or(CommErr::CErr("page do not exist"))?;
+            // let relationships_model = relationships::Entity::find().filter(relationships::Column::Cid.eq(contents_model.cid)).one(txn).await?.ok_or(CommErr::CErr("page relationship do not exist"))?;
+
+            // let relationships_model  = contents_model.find_related(relationships::Entity).one(txn).await?.ok_or(CommErr::CErr("page relationship do not exist"))?;
+            // let metas_moel = relationships_model.find_related(metas::Entity).one(txn).await?.ok_or(CommErr::CErr("page relationship do not exist"))?;
 
             let mut contents_model: self::contents::ActiveModel = contents_model.into();
             contents_model.title = Set(Some(page.title.clone()));
