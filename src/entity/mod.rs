@@ -7,9 +7,18 @@ use crate::error::CommErr;
 
 use super::notion::page;
 use chrono::DateTime;
+use anyhow::Result;
 
 
-pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> anyhow::Result<()> {
+pub async fn is_exist(db: &DatabaseConnection, slug: String) -> Result<bool> {
+    let model = contents::Entity::find().filter(contents::Column::Slug.eq(Some(slug))).one(db).await?;
+    match model {
+        Some(_) => Ok(true),
+        None => Ok(false),
+    }
+}
+
+pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> Result<()> {
     db.transaction::<_, (), CommErr>(|txn| {
         Box::pin(async move {
             let content_res = contents::ActiveModel {
@@ -74,6 +83,26 @@ pub async fn new_article(db: &DatabaseConnection, page: page::Page) -> anyhow::R
                 }.insert(txn)
                 .await?;
             }
+
+            Ok(())
+        })
+    })
+    .await?;
+
+    Ok(())
+}
+
+pub async fn update_article(db: &DatabaseConnection, page: page::Page) -> Result<()> {
+    db.transaction::<_, (), CommErr>(|txn| {
+        Box::pin(async move {
+            let slug = page.search_property("slug")?;
+            let model = contents::Entity::find().filter(contents::Column::Slug.eq(Some(slug[0].0.clone()))).one(txn).await?.ok_or(CommErr::CErr("page do not exist"))?;
+
+            let mut model: self::contents::ActiveModel = model.into();
+            model.title = Set(Some(page.title.clone()));
+            model.modified = Set(DateTime::parse_from_rfc3339(&page.edited_time)?.timestamp() as u32);
+            model.text = Set(format!("<!--markdown-->{}", page.content.to_string()));
+            model.update(txn).await?;
 
             Ok(())
         })
