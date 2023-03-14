@@ -1,10 +1,10 @@
-use std::str::FromStr;
+use std::{str::FromStr, env};
 use std::fmt::Display as FmtDisplay;
 use anyhow::Result;
 use strum::EnumProperty;
 use serde_json::Map;
 
-use super::{Notion, CommErr, get_value_str, get_property_value, Json, NewImp, text::*, img_to_base64};
+use super::{Notion, CommErr, get_value_str, get_property_value, Json, NewImp, text::*, img_to_base64, download_img};
 
 
 #[derive(Debug, Default)]
@@ -101,12 +101,15 @@ impl BlockElement {
                     line.push(FragmentText::new(v)?);
                 }
 
-                return Ok(BlockElement {
-                    line,
-                    line_type,
-                    file: img_to_base64(&get_value_str(get_property_value(block, None)?, "url")?)?,
-                    ..Default::default()
-                });
+                let path = get_value_str(get_property_value(block, None)?, "url")?;
+                let file = match env::var("IMG_DOWNLOAD")?.as_str() {
+                    "origin" => path,
+                    "file" => download_img(&path, &env::var("STATIC_PATH")?)?,
+                    "base64" => img_to_base64(&path)?,
+                    _ => path
+                };
+
+                return Ok(BlockElement { line, line_type, file, ..Default::default() });
             },
             _ => {
                 let rich_text = block.get("rich_text")

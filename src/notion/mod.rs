@@ -224,7 +224,7 @@ fn get_value_str(value: &Json, index: &'static str) -> Result<String> {
  */
 fn img_to_base64(path: &str) -> Result<String> {
     match path.find("secure.notion-static.com") {
-        Some(_) => return Ok(String::default()),
+        Some(_) => return Ok(path.to_string()),
         None => {
             use base64::{Engine as _, engine::general_purpose};
             let res = reqwest::blocking::Client::new().get(path).send()?;
@@ -236,4 +236,23 @@ fn img_to_base64(path: &str) -> Result<String> {
             Err(CommErr::HttpResErr("Request image in Notin Error").into())
         }
     }
+}
+
+/**
+ * 下载图片
+ */
+fn download_img(path: &str, save_path: &str) -> Result<String> {
+    if std::path::Path::new(save_path.trim_end_matches('/')).try_exists().is_err() {
+        return Err(CommErr::CErr("STATIC_PATH").into());
+    }
+
+    let res = reqwest::blocking::Client::new().get(path).send()?;
+    let code = res.status();
+    if code.is_success() {
+        let name = std::path::Path::new(path.split("?").collect::<Vec<&str>>()[0]).file_name().unwrap().to_str().unwrap().to_string();
+        let path = format!("{}/{}", save_path.trim_end_matches('/'), name);
+        std::fs::write(path.clone(), res.bytes()?)?;
+        return Ok(path);
+    }
+    Err(CommErr::HttpResErr("Request image in Notin Error").into())
 }
