@@ -164,8 +164,8 @@ impl Property {
         }
     }
 
-    pub fn to_string_array(&self) -> Result<Vec<String>> {
-        if self.data.len() > 1 {
+    pub fn to_array(&self) -> Result<Vec<String>> {
+        if self.data.len() <= 1 {
             let msg: &'static str = Box::leak(Box::new(self.property.get_val()));
             return Err(CommErr::FormatErr(msg).into());
         }

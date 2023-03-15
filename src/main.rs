@@ -25,12 +25,16 @@ fn main() -> Result<()> {
     //     database.next()?;
     // }
 
-
     for mut page in database.page_list.into_iter() {
         let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";
         std::fs::write(path, page.content()?)?;
         // println!("{:#?}", page);
-        // block_on(entity::new_article(&db, page))?;
+        if block_on(entity::is_exist(&db, page.search_property("Slug").unwrap().to_string()))? {
+            block_on(entity::update_article(&db, page))?;
+        } else {
+            block_on(entity::new_article(&db, page))?;
+        }
     }
+
     Ok(())
 }
