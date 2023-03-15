@@ -30,8 +30,10 @@ fn main() -> Result<()> {
         std::fs::write(path, page.content()?)?;
         // println!("{:#?}", page);
         if block_on(entity::is_exist(&db, page.search_property("Slug").unwrap().to_string()))? {
+            println!("update");
             block_on(entity::update_article(&db, page))?;
         } else {
+            println!("create");
             block_on(entity::new_article(&db, page))?;
         }
     }
