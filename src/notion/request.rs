@@ -42,7 +42,7 @@ impl Request {
         let client = match method {
             RequestMethod::GET => client.get(path),
             RequestMethod::POST => client.post(path).json(&body),
-            RequestMethod::PATCH => client.patch(path),
+            RequestMethod::PATCH => client.patch(path).json(&body),
             RequestMethod::DELETE => client.delete(path),
         };
 

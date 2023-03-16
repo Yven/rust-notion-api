@@ -85,6 +85,23 @@ impl PropertyType {
         }
     }
 
+    pub fn get_property_name(&self) -> String {
+        {
+            use PropertyType::*;
+            let default = self.to_string();
+            let res = match &self {
+                Text(_) => "rich_text",
+                Number(_) => "format",
+                Select(_) => "name",
+                MultiSelect(_) => "name",
+                Status(_) => "name",
+                _ => &default,
+            };
+
+            res.to_string()
+        }
+    }
+
     pub fn reset_val(&self, val: String) -> Self {
         let val: &'static str = Box::leak(Box::new(val));
         {

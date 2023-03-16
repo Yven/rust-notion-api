@@ -1,4 +1,5 @@
 use futures::executor::block_on;
+use notion_api::notion::page::Page;
 use notion_api::notion::{Notion, property::PropertyType, sort::Direction, database::Database};
 use notion_api::{db_connection, entity};
 use anyhow::{Result, Ok};
@@ -11,7 +12,7 @@ fn main() -> Result<()> {
 
     let db = block_on(db_connection())?;
 
-    let s1 = PropertyType::Status("Status").equals("archive");
+    let s1 = PropertyType::Status("Status").equals("publish");
     let s2 = PropertyType::MultiSelect("Tag").contains("test");
     let filter = s1.and(s2);
 
@@ -26,16 +27,20 @@ fn main() -> Result<()> {
     // }
 
     for mut page in database.page_list.into_iter() {
-        let path = env!("CARGO_MANIFEST_DIR").to_string() + "/" + &page.title + ".md";
+        let id = page.id.clone();
+        let path = format!("{}/{}.md", env!("CARGO_MANIFEST_DIR").to_string(), page.title);
         std::fs::write(path, page.content()?)?;
         // println!("{:#?}", page);
         if block_on(entity::is_exist(&db, page.search_property("Slug").unwrap().to_string()))? {
-            println!("update");
+            println!("updating...");
             block_on(entity::update_article(&db, page))?;
         } else {
-            println!("create");
+            println!("creating...");
             block_on(entity::new_article(&db, page))?;
         }
+        let page = Notion::Pages(id).update::<Page>(vec![(PropertyType::Status("Status"), "archive".to_string())])?;
+        println!("Now Page {} status : {}", page.title, page.search_property("Status").unwrap().to_string());
+        // page.update(vec![(PropertyType::Status("Status"), "archive")]);
     }
 
     Ok(())

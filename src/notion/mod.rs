@@ -27,6 +27,13 @@ pub trait NewImp {
     // fn search(builder: &NotionBuilder) -> Result<Self>  where Self: Sized;
 }
 
+pub enum FnMethod {
+    Search,
+    Update,
+    Create,
+    Delete,
+}
+
 
 #[allow(dead_code)]
 pub enum Notion {
@@ -68,7 +75,14 @@ impl Notion {
     pub fn search<T: NewImp>(self) -> Result<T> {
         let id = self.get_val();
         let builder = NotionBuilder::new(self);
-        let res = builder.request.query(builder.method(), builder.path(), builder.format_body())?;
+        let res = builder.request.query(builder.method(FnMethod::Search), builder.path(), builder.format_body())?;
+        T::new(&res, id)
+    }
+
+    pub fn update<T: NewImp>(self, data: Vec<(PropertyType, String)>) -> Result<T> {
+        let id = self.get_val();
+        let builder = NotionBuilder::new(self);
+        let res = builder.request.query(builder.method(FnMethod::Update), builder.path(), NotionBuilder::build_patch_body(data))?;
         T::new(&res, id)
     }
 }
@@ -120,13 +134,34 @@ impl NotionBuilder {
         }
     }
 
-    pub fn method(&self) -> RequestMethod {
+    pub fn method(&self, act: FnMethod) -> RequestMethod {
         {
             use Notion::*;
+            use FnMethod::*;
             match self.module {
-                Databases(_) => RequestMethod::POST,
-                Pages(_) => RequestMethod::GET,
-                Blocks(_) => RequestMethod::GET,
+                Databases(_) => {
+                    match act {
+                        Search => RequestMethod::POST,
+                        Update => RequestMethod::PATCH,
+                        _ => RequestMethod::POST,
+                    }
+                },
+                Pages(_) => {
+                    match act {
+                        Search => RequestMethod::GET,
+                        Update => RequestMethod::PATCH,
+                        Create => RequestMethod::POST,
+                        _ => RequestMethod::GET,
+                    }
+                },
+                Blocks(_) => {
+                    match act {
+                        Search => RequestMethod::GET,
+                        Update => RequestMethod::PATCH,
+                        Create => RequestMethod::POST,
+                        Delete => RequestMethod::DELETE,
+                    }
+                },
                 Users(_) => RequestMethod::GET,
             }
         }
@@ -161,8 +196,17 @@ impl NotionBuilder {
     }
 
     pub fn search<T: NewImp>(&self) -> Result<T> {
-        let res = self.request.query(self.method(), self.path(), self.format_body())?;
+        let res = self.request.query(self.method(FnMethod::Search), self.path(), self.format_body())?;
         T::new(&res, self.module.get_val())
+    }
+
+    pub fn build_patch_body(data: Vec<(PropertyType, String)>) -> Json {
+        let mut body: Vec<String> = Vec::new();
+        for item in data {
+            body.push(format!(r#""{}": {{"{}": {{"{}": "{}"}}}}"#, item.0.get_val(), item.0.to_string(), item.0.get_property_name(), item.1));
+        }
+
+        serde_json::from_str::<Json>(&format!(r#"{{"properties": {{{}}}}}"#, body.join(","))).unwrap()
     }
 
     pub fn format_body(&self) -> Json {
