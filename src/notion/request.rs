@@ -38,6 +38,7 @@ impl Request {
 
     pub fn query(&self, method: RequestMethod, path: String, body: Json) -> Result<Json> {
         let client = reqwest::blocking::Client::new();
+        let file_name = path.split("/").next().unwrap();
         let path = format!("{}{}", self.url, path);
         let client = match method {
             RequestMethod::GET => client.get(path),
@@ -54,6 +55,7 @@ impl Request {
         let code = res.status();
         let res: Json = serde_json::from_str(res.text()?.as_str())?;
         if code.is_success() {
+            std::fs::write(format!("{}/template/{}.json", env!("CARGO_MANIFEST_DIR").to_string(), file_name), format!("{}", res))?;
             Ok(res)
         } else {
             let msg: &'static str = Box::leak(Box::new("<".to_string() + code.as_str() + ">:" + &get_value_str(&res, "message")?));
