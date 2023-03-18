@@ -83,7 +83,7 @@ async fn decrease_metas(db: &DatabaseTransaction, model: metas::Model, cid: u32)
 async fn create_metas(db: &DatabaseTransaction, name: String, mtype: String, cid: u32) -> Result<()> {
     use md5::{Md5, Digest};
     let mut hasher = Md5::new();
-    hasher.update(name.clone());
+    hasher.update(format!("{}{}", name, mtype));
     let metas_res = metas::ActiveModel {
         name: Set(Some(name)),
         slug: Set(Some(format!("{:x}", hasher.finalize()))),

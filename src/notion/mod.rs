@@ -12,6 +12,7 @@ use self::request::{Request, RequestMethod};
 use sort::{Sort, Direction};
 use filter::Filter;
 use property::PropertyType;
+use strum::EnumProperty;
 pub use super::error::CommErr;
 
 use std::fmt::Display;
@@ -79,10 +80,10 @@ impl Notion {
         T::new(&res, id)
     }
 
-    pub fn update<T: NewImp>(self, data: Vec<(PropertyType, String)>) -> Result<T> {
+    pub fn update<T: NewImp>(self, data: Vec<(PropertyType, &str)>) -> Result<T> {
         let id = self.get_val();
         let builder = NotionBuilder::new(self);
-        let res = builder.request.query(builder.method(FnMethod::Update), builder.path(), NotionBuilder::build_patch_body(data))?;
+        let res = builder.request.query(builder.method(FnMethod::Update), builder.path(), NotionBuilder::build_update_body(data)?)?;
         T::new(&res, id)
     }
 }
@@ -200,13 +201,15 @@ impl NotionBuilder {
         T::new(&res, self.module.get_val())
     }
 
-    pub fn build_patch_body(data: Vec<(PropertyType, String)>) -> Json {
+    pub fn build_update_body(data: Vec<(PropertyType, &str)>) -> Result<Json> {
         let mut body: Vec<String> = Vec::new();
         for item in data {
-            body.push(format!(r#""{}": {{"{}": {{"{}": "{}"}}}}"#, item.0.get_val(), item.0.to_string(), item.0.get_property_name(), item.1));
+            body.push(item.0.get_str("update_json").ok_or(CommErr::UnsupportErr)?
+                .replace("{name}", &item.0.get_val())
+                .replace("{value}", item.1));
         }
 
-        serde_json::from_str::<Json>(&format!(r#"{{"properties": {{{}}}}}"#, body.join(","))).unwrap()
+        Ok(serde_json::from_str::<Json>(&format!(r#"{{"properties": {{{}}}}}"#, body.join(",")))?)
     }
 
     pub fn format_body(&self) -> Json {

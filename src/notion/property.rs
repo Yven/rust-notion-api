@@ -5,7 +5,7 @@ use crate::notion::get_property_value;
 
 use super::{filter::Filter, CommErr, get_value_str, Json};
 use serde_json::Map;
-use strum_macros::{Display as EnumDisplay, EnumString};
+use strum_macros::{Display as EnumDisplay, EnumString, EnumProperty};
 use anyhow::Result;
 
 
@@ -33,16 +33,22 @@ impl Author {
 }
 
 
-#[derive(EnumDisplay, EnumString, Debug, PartialEq, Eq, Hash)]
+#[derive(EnumDisplay, EnumString, EnumProperty, Debug, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "snake_case")]
 pub enum PropertyType {
-    #[strum(serialize="rich_text")]
+    #[strum(serialize="rich_text",props(update_json=r#""{name}": {"rich_text": [ {"text": {"content": "{value}"} } ] }"#))]
     Text(&'static str),
+    #[strum(props(update_json=r#""{name}": {"number": {value}}"#))]
     Number(&'static str),
+    #[strum(props(update_json=r#""{name}": {"checkbox": {value}}"#))]
     Checkbox(&'static str),
+    #[strum(props(update_json=r#""{name}": {"select": {"name": "{value}"}}"#))]
     Select(&'static str),
+    #[strum(props(update_json=r#""{name}": {"multi_select": [ {"name": "{value}"} ] }"#))]
     MultiSelect(&'static str),
+    #[strum(props(update_json=r#""{name}": {"status": {"name": "{value}"}}"#))]
     Status(&'static str),
+    #[strum(props(update_json=r#""{name}": {"date": {"start": "{value}"}}"#))]
     Date(&'static str),
     People(&'static str),
     Files(&'static str),
@@ -85,23 +91,6 @@ impl PropertyType {
         }
     }
 
-    pub fn get_property_name(&self) -> String {
-        {
-            use PropertyType::*;
-            let default = self.to_string();
-            let res = match &self {
-                Text(_) => "rich_text",
-                Number(_) => "format",
-                Select(_) => "name",
-                MultiSelect(_) => "name",
-                Status(_) => "name",
-                _ => &default,
-            };
-
-            res.to_string()
-        }
-    }
-
     pub fn reset_val(&self, val: String) -> Self {
         let val: &'static str = Box::leak(Box::new(val));
         {
@@ -129,7 +118,7 @@ impl PropertyType {
 #[allow(dead_code)]
 pub struct Property {
     pub property: PropertyType,
-    pub data: Vec<HashMap<String, String>>,
+    pub data: Vec<HashMap<String, Json>>,
 }
 
 impl Property {
@@ -157,8 +146,8 @@ impl Property {
 
             if !property_map.is_empty() {
                 let mut hm = HashMap::new();
-                for (k, v) in property_map.iter() {
-                    hm.insert(k.to_string(), v.as_str().unwrap_or_default().to_string());
+                for (k, v) in property_map {
+                    hm.insert(k.to_string(), v);
                 }
                 property_data_opt.push(hm);
             }
@@ -177,6 +166,8 @@ impl Property {
         match self.property {
             Date(_) => "start".to_string(),
             Text(_) => "plain_text".to_string(),
+            Checkbox(_) => "checkbox".to_string(),
+            Number(_) => "number".to_string(),
             _ => "name".to_string(),
         }
     }
@@ -192,7 +183,7 @@ impl Property {
         let mut res = Vec::new();
         let msg: &'static str = Box::leak(Box::new(key.to_string()));
         for p_item in self.data.iter() {
-            res.push(p_item.get(&key).ok_or(CommErr::FormatErr(msg))?.to_owned());
+            res.push(Property::data_to_string(&self.property, p_item.get(&key).ok_or(CommErr::FormatErr(msg))?));
         }
 
         Ok(res)
@@ -200,6 +191,27 @@ impl Property {
 
     pub fn is_empty(&self) -> bool {
         if self.data.is_empty() { return true; } else { return false; }
+    }
+
+    pub fn data_to_string(ptype: &PropertyType, data: &Json) -> String {
+        {
+            use PropertyType::*;
+            match ptype {
+                Number(_) => {
+                    if data.is_i64() {
+                        format!("{}", data.as_f64().unwrap())
+                    } else if data.is_u64() {
+                        format!("{}", data.as_u64().unwrap())
+                    } else if data.is_f64() {
+                        format!("{}", data.as_f64().unwrap())
+                    } else {
+                        format!("{}", data.to_string())
+                    }
+                },
+                Checkbox(_) => format!("{}", data.as_bool().unwrap_or_default()),
+                _ => format!("{}", data.as_str().unwrap_or_default()),
+            }
+        }
     }
 }
 
@@ -215,6 +227,6 @@ impl Display for Property {
             return Err(std::fmt::Error);
         }
 
-        write!(f, "{}", self.data[0].get(&key).ok_or(std::fmt::Error)?)
+        write!(f, "{}", Property::data_to_string(&self.property, self.data[0].get(&key).ok_or(std::fmt::Error)?))
     }
 }
