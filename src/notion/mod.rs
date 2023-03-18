@@ -15,6 +15,7 @@ use property::PropertyType;
 use strum::EnumProperty;
 pub use super::error::CommErr;
 
+use std::env;
 use std::fmt::Display;
 pub use serde_json::Value as Json;
 use anyhow::Result;
@@ -293,13 +294,19 @@ fn download_img(path: &str, save_path: &str) -> Result<String> {
         return Err(CommErr::CErr("STATIC_PATH").into());
     }
 
+    let page_path = env::var("PAGE_SAVE_PATH")?;
+    if !save_path.starts_with(&page_path) {
+        return Err(CommErr::CErr("STATIC_PATH").into());
+    }
+
     let res = reqwest::blocking::Client::new().get(path).send()?;
     let code = res.status();
     if code.is_success() {
         let name = std::path::Path::new(path.split("?").collect::<Vec<&str>>()[0]).file_name().unwrap().to_str().unwrap().to_string();
         let path = format!("{}/{}", save_path.trim_end_matches('/'), name);
         std::fs::write(path.clone(), res.bytes()?)?;
-        return Ok(path);
+
+        return Ok(path.replace(page_path.trim_start_matches('.'), ""));
     }
     Err(CommErr::HttpResErr("Request image in Notin Error").into())
 }

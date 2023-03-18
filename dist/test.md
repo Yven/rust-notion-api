@@ -59,4 +59,4 @@ $$E=mc^2$$
 
 链接测试之[这里是链接到网站地址](https://www.baidu.com)后面的
 
-![o**tt**er](https://s3.us-west-2.amazonaws.com/secure.notion-static.com/1e4e0187-c8b2-4863-9264-b1452fda7192/otter__go.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20230316%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20230316T095420Z&X-Amz-Expires=3600&X-Amz-Signature=4faf71ae32ac6db717784b59002591215417b18694e66d790939ebb1bbfc0c1b&X-Amz-SignedHeaders=host&x-id=GetObject)
+![o**tt**er](./static/otter__go.png)

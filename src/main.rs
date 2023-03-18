@@ -25,10 +25,11 @@ fn main() -> Result<()> {
         database.next()?;
     }
 
+    let page_path = env::var("PAGE_SAVE_PATH")?;
     for mut page in database.page_list.into_iter() {
         // println!("{:#?}", page);
         let id = page.id.clone();
-        let path = format!("{}/dist/{}.md", env!("CARGO_MANIFEST_DIR").to_string(), page.title);
+        let path = format!("{}/{}.md", page_path.trim_end_matches('/'), page.title);
         std::fs::write(path, page.content()?)?;
         if block_on(entity::is_exist(&db, page.search_property("Slug").unwrap().to_string()))? {
             println!("updating...");
