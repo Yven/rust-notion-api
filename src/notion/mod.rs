@@ -290,7 +290,8 @@ fn img_to_base64(path: &str) -> Result<String> {
  * 下载图片
  */
 fn download_img(path: &str, save_path: &str) -> Result<String> {
-    if std::path::Path::new(save_path.trim_end_matches('/')).try_exists().is_err() {
+    let is_exist = std::path::Path::new(save_path.trim_end_matches('/')).try_exists();
+    if is_exist.is_err() || !is_exist.unwrap() {
         return Err(CommErr::CErr("STATIC_PATH").into());
     }
 

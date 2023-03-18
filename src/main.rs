@@ -15,20 +15,29 @@ fn init_logger() {
         .filter("LOG_LEVEL")
         .write_style("LOG_STYLE");
 
+    let log_path = format!("{}/{}.log", env::var("LOG_PATH").unwrap(), chrono::Utc::now().format("%Y%m%d"));
+    let path = std::path::Path::new(&log_path);
+    if path.try_exists().is_err() || !path.try_exists().unwrap() {
+        std::fs::create_dir_all(path.parent().unwrap()).expect("Create Log Path Feiled");
+        std::fs::File::create(log_path.clone()).expect("Create Log File Feiled");
+    }
+
     Builder::from_env(env)
         .format(|buf, record| {
             let mut style = buf.style();
-            style.set_bg(Color::Yellow).set_bold(true);
-
-            let timestamp = buf.timestamp();
+            style.set_color(Color::Yellow).set_bold(true);
 
             writeln!(
                 buf,
-                "My formatted log ({}): {}",
-                timestamp,
-                style.value(record.args())
+                "[{}] 文件 {} 中第 {} 行({}):\n{}\n",
+                style.value(record.level()),
+                style.value(record.file().unwrap()),
+                style.value(record.line().unwrap()),
+                chrono::Utc::now().with_timezone(&chrono::FixedOffset::east_opt(8 * 3600).unwrap()).format("%Y-%m-%d %H:%M:%S"),
+                record.args(),
             )
         })
+        .target(env_logger::Target::Pipe(Box::new(std::fs::File::options().append(true).open(log_path).expect("Can't create file"))))
         .init();
 }
 
