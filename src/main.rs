@@ -5,9 +5,39 @@ use anyhow::{Result, Ok};
 use dotenv::dotenv;
 use std::env;
 
+use log::info;
+
+use env_logger::{fmt::Color, Builder, Env};
+use std::io::Write;
+
+fn init_logger() {
+    let env = Env::default()
+        .filter("LOG_LEVEL")
+        .write_style("LOG_STYLE");
+
+    Builder::from_env(env)
+        .format(|buf, record| {
+            let mut style = buf.style();
+            style.set_bg(Color::Yellow).set_bold(true);
+
+            let timestamp = buf.timestamp();
+
+            writeln!(
+                buf,
+                "My formatted log ({}): {}",
+                timestamp,
+                style.value(record.args())
+            )
+        })
+        .init();
+}
+
 
 fn main() -> Result<()> {
     dotenv().ok();
+    init_logger();
+
+    info!("test logger info");
 
     let db = block_on(db_connection())?;
 
