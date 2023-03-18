@@ -1224,6 +1224,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "futures",
+ "lazy_static",
  "md-5",
  "reqwest",
  "sea-orm",

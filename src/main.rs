@@ -39,7 +39,7 @@ fn main() -> Result<()> {
             block_on(entity::new_article(&db, page))?;
         }
         let page = Notion::Pages(id).update::<Page>(vec![(PropertyType::Status("Status"), "archive")])?;
-        println!("Now Page {} status : {}", page.title, page.search_property("Status").unwrap().to_string());
+        println!("Now Page 【{}】 status : {}", page.title, page.search_property("Status").unwrap().to_string());
     }
 
     Ok(())

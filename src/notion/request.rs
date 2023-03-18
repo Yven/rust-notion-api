@@ -55,7 +55,9 @@ impl Request {
         let code = res.status();
         let res: Json = serde_json::from_str(res.text()?.as_str())?;
         if code.is_success() {
-            std::fs::write(format!("{}/template/{}.json", env!("CARGO_MANIFEST_DIR").to_string(), file_name), format!("{}", res))?;
+            if *crate::DEBUG_MODE {
+                std::fs::write(format!("{}/{}.json", env::var("DEBUG_PATH")?, file_name), format!("{}", res))?;
+            }
             Ok(res)
         } else {
             let msg: &'static str = Box::leak(Box::new("<".to_string() + code.as_str() + ">:" + &get_value_str(&res, "message")?));
