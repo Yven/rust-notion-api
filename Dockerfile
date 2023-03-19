@@ -5,7 +5,7 @@ WORKDIR /www/rust
 
 RUN cargo build --release
 
-FROM alppine:latest
+FROM alpine:latest
 
 RUN apk --no-cache add tzdata \
     && cp "/usr/share/zoneinfo/Asia/Shanghai" /etc/localtime \
